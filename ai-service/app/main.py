@@ -7,10 +7,12 @@ from app.api.health import router as health_router
 from app.api.risk import router as risk_router
 from app.api.explain import router as explain_router
 
+from app.api.prediction_history import router as prediction_history_router
+
 
 app = FastAPI(
     title=settings.app_name,
-    version=settings.app_version,
+    version=settings.version,
     description="Explainable AI backend for intelligent portfolio risk profiling and investment analytics."
 )
 
@@ -25,6 +27,7 @@ app.add_middleware(
 app.include_router(health_router, prefix=settings.api_prefix)
 app.include_router(risk_router, prefix=settings.api_prefix)
 app.include_router(explain_router, prefix=settings.api_prefix)
+app.include_router(prediction_history_router, prefix=settings.api_prefix)
 
 
 @app.get("/", tags=["Root"])
