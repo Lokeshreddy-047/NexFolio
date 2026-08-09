@@ -5,6 +5,7 @@ from app.config.settings import settings
 from app.api.health import router as health_router
 
 from app.api.risk import router as risk_router
+from app.api.explain import router as explain_router
 
 
 app = FastAPI(
@@ -23,6 +24,7 @@ app.add_middleware(
 
 app.include_router(health_router, prefix=settings.api_prefix)
 app.include_router(risk_router, prefix=settings.api_prefix)
+app.include_router(explain_router, prefix=settings.api_prefix)
 
 
 @app.get("/", tags=["Root"])
