@@ -1,0 +1,106 @@
+{
+    "identifiers": [
+        "date",
+        "ticker",
+        "sector"
+    ],
+    "base_metrics": [
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume"
+    ],
+    "returns": [
+        "daily_return",
+        "log_return",
+        "cumulative_return",
+        "return_5d",
+        "return_20d",
+        "return_60d",
+        "return_252d"
+    ],
+    "volatility": [
+        "volatility_7d",
+        "volatility_14d",
+        "volatility_30d",
+        "volatility_60d",
+        "volatility_90d",
+        "volatility_252d",
+        "annualized_volatility"
+    ],
+    "risk_adjusted": [
+        "downside_deviation_30d",
+        "downside_deviation_60d",
+        "downside_deviation_252d",
+        "drawdown",
+        "rolling_max_drawdown_30d",
+        "rolling_max_drawdown_60d",
+        "rolling_max_drawdown_252d",
+        "sharpe_30d",
+        "sharpe_60d",
+        "sharpe_252d",
+        "sortino_30d",
+        "sortino_60d",
+        "sortino_252d"
+    ],
+    "market_regime": [
+        "market_return",
+        "market_volatility_30d",
+        "market_volatility_60d",
+        "market_volatility_252d",
+        "beta_30d",
+        "beta_60d",
+        "beta_252d"
+    ],
+    "technical": [
+        "sma_20",
+        "sma_50",
+        "sma_100",
+        "sma_200",
+        "price_to_sma20",
+        "price_to_sma50",
+        "price_to_sma100",
+        "price_to_sma200",
+        "rsi_14",
+        "macd",
+        "macd_signal",
+        "macd_histogram",
+        "bollinger_middle",
+        "bollinger_upper",
+        "bollinger_lower",
+        "bollinger_width",
+        "bollinger_position",
+        "atr_14"
+    ],
+    "momentum_volume": [
+        "volume_change",
+        "volume_sma_20",
+        "volume_ratio_20",
+        "volume_volatility",
+        "daily_range",
+        "high_low_ratio",
+        "open_close_change",
+        "close_open_ratio",
+        "upper_shadow",
+        "lower_shadow",
+        "body_size",
+        "momentum_5d",
+        "momentum_10d",
+        "momentum_20d",
+        "momentum_60d"
+    ],
+    "cross_sectional": [
+        "sector_return",
+        "sector_volatility_30d",
+        "sector_relative_return",
+        "daily_return_percentile",
+        "volatility_percentile",
+        "momentum_percentile",
+        "volume_rank"
+    ],
+    "targets": [
+        "target_1d_return",
+        "target_trend"
+    ]
+}

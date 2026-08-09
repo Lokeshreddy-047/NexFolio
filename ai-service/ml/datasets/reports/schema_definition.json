@@ -1,0 +1,27 @@
+{
+    "dataset_name": "NexFolio AI-Ready Historical Market Database",
+    "matrix_dimensions": {
+        "total_rows": 828563,
+        "total_columns": 11,
+        "total_companies": 289,
+        "total_trading_days": 2867
+    },
+    "memory_footprint_mb": 189.86,
+    "features": {
+        "date": "object",
+        "ticker": "object",
+        "sector": "object",
+        "open": "float32",
+        "high": "float32",
+        "low": "float32",
+        "close": "float32",
+        "volume": "int64",
+        "is_trading_day": "int64",
+        "is_listed": "int8",
+        "is_missing_observation": "int8"
+    },
+    "governance": {
+        "pre_ipo_handling": "Preserved as NaN (is_listed = 0)",
+        "intra_period_anomalies": "Localized grouped forward-fill applied"
+    }
+}

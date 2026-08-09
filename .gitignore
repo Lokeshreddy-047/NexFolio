@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ML models (optional if very large)
+*.h5
+*.keras
+*.onnx
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# Node
+node_modules/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+
+# Large generated datasets
+ai-service/ml/datasets/features/*.parquet
+ai-service/ml/datasets/portfolio/*.parquet
+ai-service/ml/datasets/cleaned/*.csv
+ai-service/ml/datasets/processed/*.csv
+
+# Keep reports and metadata
+ai-service/ml/datasets/portfolio/phase7_reports/*.csv
+ai-service/ml/datasets/portfolio/phase7_reports/*.json
+ai-service/ml/datasets/portfolio/phase7_reports/*.md
+ai-service/ml/datasets/reports/*.csv
+ai-service/ml/datasets/reports/*.md
+ai-service/ml/datasets/reports/*.json
