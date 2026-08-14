@@ -9,6 +9,6 @@ async def health_check():
     return {
         "status": "healthy",
         "service": settings.app_name,
-        "version": settings.app_version,
+        "version": settings.version,
         "message": "NexFolio AI backend is running successfully"
     }
