@@ -29,51 +29,54 @@ export async function apiRequest<T>(
 
 
 export interface PredictionHistoryItem {
+
   prediction_id: string;
+
   portfolio_id: string;
+
   risk_category: string;
+
   confidence: number;
+
   created_at: string;
+
 }
 
 
 
 export interface SavePredictionPayload {
+
   user_id: string;
+
   portfolio_id: string;
+
   portfolio_data: Record<string, number>;
-}
 
-
-
-export interface PredictionResponse {
-  prediction_id?: string;
-  risk_category: string;
-  confidence: number;
 }
 
 
 
 export async function savePrediction(
   payload: SavePredictionPayload
-): Promise<PredictionResponse> {
+) {
 
-  return apiRequest<PredictionResponse>(
+  return apiRequest(
     "/api/v1/predictions/save",
     {
       method: "POST",
       body: JSON.stringify(payload),
     }
   );
+
 }
 
 
 
-export async function getPredictionHistory(): Promise<
-  PredictionHistoryItem[]
-> {
+export async function getPredictionHistory()
+: Promise<PredictionHistoryItem[]> {
 
   return apiRequest<PredictionHistoryItem[]>(
     "/api/v1/predictions"
   );
+
 }
