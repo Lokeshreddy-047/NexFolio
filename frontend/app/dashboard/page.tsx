@@ -1,6 +1,7 @@
 "use client";
 
 import ShapContributors from "@/components/shap-contributors";
+import RiskProbabilities from "@/components/risk-probabilities";
 
 import {
   useEffect,
@@ -47,6 +48,7 @@ interface RiskResult {
   confidence: number;
 
   probabilities?: Record<string, number>;
+
 
   explanation?: {
 
@@ -680,6 +682,37 @@ export default function DashboardPage() {
 
 
                   </div>
+                  <RiskProbabilities
+  probabilities={
+    result.probabilities
+  }
+/>
+<ShapContributors
+
+  title="Risk Increasing Factors"
+
+  items={
+    result.explanation
+      ?.top_positive_contributors || []
+  }
+
+  positive={true}
+
+/>
+
+
+<ShapContributors
+
+  title="Risk Reducing Factors"
+
+  items={
+    result.explanation
+      ?.top_negative_contributors || []
+  }
+
+  positive={false}
+
+/>
 
 
 
