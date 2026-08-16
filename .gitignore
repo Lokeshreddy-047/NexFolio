@@ -40,26 +40,27 @@ Thumbs.db
 # =========================
 ai-service/ml/datasets/**/*.csv
 ai-service/ml/datasets/**/*.parquet
-ai-service/ml/datasets/**/*.json
+ai-service/ml/datasets/cleaned/
+ai-service/ml/datasets/features/
+ai-service/ml/datasets/processed/
+ai-service/ml/datasets/raw/
+ai-service/ml/datasets/reports/
+ai-service/ml/datasets/portfolio/audit/
+ai-service/ml/datasets/portfolio/phase7_reports/
+ai-service/ml/reports/
+
+# Keep essential feature metadata
+!ai-service/ml/datasets/portfolio/xgboost_ready/feature_metadata.json
 
 # =========================
-# ML model artifacts
+# ML model artifacts (tracked for production inference)
 # =========================
-*.pkl
-*.joblib
-*.h5
-*.keras
-*.onnx
+!ai-service/ml/models/
+!ai-service/ml/models/xgboost_risk_model.pkl
+!ai-service/ml/models/shap_explainer.pkl
+!ai-service/ml/models/random_forest_risk_model.pkl
 
 # =========================
 # Python cache inside ai-service
 # =========================
 ai-service/**/__pycache__/
-
-# ML generated artifacts
-ai-service/ml/datasets/
-ai-service/ml/models/
-ai-service/ml/*.zip
-
-# ML reports/generated outputs
-ai-service/ml/reports/
