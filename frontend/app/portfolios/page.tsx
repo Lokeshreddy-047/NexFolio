@@ -146,16 +146,16 @@ export default function PortfoliosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex">
+    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
       <Sidebar />
 
-      <main className="flex-1 lg:pl-64 min-w-0 flex flex-col">
+      <div className="flex flex-col flex-1 min-w-0">
         <Header
           title="Portfolio Management"
           subtitle="Organize, track, and analyze your multi-strategy investment accounts"
         />
 
-        <div className="p-4 md:p-8 space-y-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 lg:p-8 space-y-6 max-w-[1600px] w-full mx-auto">
           {/* Aggregate KPI Summary Area */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 shadow-sm">
@@ -369,8 +369,8 @@ export default function PortfoliosPage() {
               })}
             </div>
           )}
-        </div>
-      </main>
+        </main>
+      </div>
 
       {/* Create / Edit Portfolio Modal */}
       {(isCreateOpen || editingPortfolio) && (

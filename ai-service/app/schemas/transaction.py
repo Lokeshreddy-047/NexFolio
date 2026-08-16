@@ -7,13 +7,15 @@ class TransactionCreate(BaseModel):
     portfolio_id: str
     symbol: str = Field(..., min_length=1, max_length=30)
     company_name: Optional[str] = None
-    transaction_type: Literal["BUY", "SELL"]
+    transaction_type: Literal["BUY", "SELL", "DIVIDEND", "BUYBACK"]
     quantity: float = Field(..., gt=0)
     price: float = Field(..., gt=0)
     asset_type: str = Field("Equity", pattern="^(Equity|ETF|Debt|Gold|Crypto|Other)$")
     sector: Optional[str] = None
     transaction_date: Optional[datetime] = None
     notes: Optional[str] = None
+    promoter_category: Optional[Literal["NON_PROMOTER", "PROMOTER_DOMESTIC_COMPANY", "PROMOTER_OTHER"]] = "NON_PROMOTER"
+    stt_paid: Optional[float] = 0.0
 
 
 class TransactionResponse(BaseModel):
@@ -30,4 +32,6 @@ class TransactionResponse(BaseModel):
     sector: str
     transaction_date: datetime
     notes: Optional[str] = None
+    promoter_category: Optional[str] = "NON_PROMOTER"
+    stt_paid: Optional[float] = 0.0
     created_at: Optional[datetime] = None

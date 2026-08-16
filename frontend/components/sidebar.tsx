@@ -4,13 +4,13 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "./auth-provider";
+import { useTheme } from "./theme-provider";
 import {
   LayoutDashboard,
   Briefcase,
   Layers,
   ArrowLeftRight,
   Sparkles,
-  ShieldAlert,
   Eye,
   TrendingUp,
   FileText,
@@ -19,7 +19,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
-  X
+  X,
+  Sun,
+  Moon
 } from "lucide-react";
 
 interface NavItem {
@@ -35,7 +37,6 @@ const navItems: NavItem[] = [
   { label: "Holdings", href: "/holdings", icon: Layers },
   { label: "Transactions", href: "/transactions", icon: ArrowLeftRight },
   { label: "AI Intelligence", href: "/intelligence", icon: Sparkles, badge: "AI" },
-  { label: "Risk Lab", href: "/test-risk", icon: ShieldAlert },
   { label: "Watchlist", href: "/watchlist", icon: Eye },
   { label: "Markets", href: "/markets", icon: TrendingUp },
   { label: "Reports", href: "/reports", icon: FileText },
@@ -45,6 +46,7 @@ const navItems: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const { theme, resolvedTheme, toggleTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -145,9 +147,26 @@ export function Sidebar() {
           })}
         </div>
 
-        {/* Mobile User Profile Section */}
-        {user && (
-          <div className="p-3 border-t border-slate-800/80 bg-slate-950/60">
+        {/* Mobile Theme & User Profile Section */}
+        <div className="p-3 border-t border-slate-800/80 bg-slate-950/60 space-y-2">
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center justify-between p-2 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/70 text-xs text-slate-300 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              {resolvedTheme === "light" ? (
+                <Sun size={15} className="text-amber-400" />
+              ) : (
+                <Moon size={15} className="text-teal-400" />
+              )}
+              <span>Theme</span>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-slate-950 px-2 py-0.5 rounded">
+              {theme}
+            </span>
+          </button>
+
+          {user && (
             <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-900/60 border border-slate-800/70">
               {user.photoURL ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -177,8 +196,8 @@ export function Sidebar() {
                 <LogOut size={16} />
               </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </aside>
 
       {/* 2. Desktop Sticky Sidebar (lg+) — Natural flex flow, zero content overlap */}
@@ -188,9 +207,12 @@ export function Sidebar() {
           ${collapsed ? "w-20" : "w-64"}
         `}
       >
-        {/* Brand Header */}
-        <div className={`h-16 flex items-center border-b border-slate-800/80 px-3 ${collapsed ? "justify-center" : "justify-between"}`}>
-          <Link href="/dashboard" className="flex items-center gap-3 overflow-hidden">
+        {/* Desktop Brand Header */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800/80">
+          <Link
+            href="/dashboard"
+            className={`flex items-center gap-3 overflow-hidden ${collapsed ? "justify-center w-full" : ""}`}
+          >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-emerald-950/40 shrink-0">
               <span className="text-white font-black text-lg tracking-wider">N</span>
             </div>
@@ -284,9 +306,32 @@ export function Sidebar() {
           })}
         </div>
 
-        {/* Desktop User Profile Section */}
-        {user && (
-          <div className="p-2.5 border-t border-slate-800/80 bg-slate-950/60">
+        {/* Desktop Footer: Theme Quick Toggle & User Profile Section */}
+        <div className="p-2.5 border-t border-slate-800/80 bg-slate-950/60 space-y-2">
+          {/* Quick Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className={`w-full flex items-center p-2 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/70 text-xs text-slate-300 transition-colors ${
+              collapsed ? "justify-center" : "justify-between"
+            }`}
+            title={`Toggle Theme (Current: ${theme})`}
+          >
+            <div className="flex items-center gap-2">
+              {resolvedTheme === "light" ? (
+                <Sun size={15} className="text-amber-400 shrink-0" />
+              ) : (
+                <Moon size={15} className="text-teal-400 shrink-0" />
+              )}
+              {!collapsed && <span>Theme</span>}
+            </div>
+            {!collapsed && (
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-slate-950 px-2 py-0.5 rounded">
+                {theme}
+              </span>
+            )}
+          </button>
+
+          {user && (
             <div className={`flex items-center gap-3 p-2 rounded-xl bg-slate-900/60 border border-slate-800/70 ${collapsed ? "justify-center" : ""}`}>
               {user.photoURL ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -322,8 +367,8 @@ export function Sidebar() {
                 </button>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </aside>
     </>
   );

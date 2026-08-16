@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional, Any
 from app.schemas.portfolio import (
     PortfolioSummary,
     PortfolioDetail,
@@ -11,12 +11,18 @@ from app.schemas.explanation_response import FeatureImpact
 from app.services.prediction_service import predict_portfolio_risk
 from app.services.explainability_service import explain_portfolio_risk
 from app.api.recommendations import generate_recommendations
+from app.services.market_data.symbol_normalizer import SymbolNormalizer
 
 
-def compute_holdings_metrics(holdings: List[dict]) -> Tuple[List[HoldingResponse], float, float, float, float]:
+def compute_holdings_metrics(
+    holdings: List[dict],
+    quotes: Optional[Dict[str, Dict[str, Any]]] = None
+) -> Tuple[List[HoldingResponse], float, float, float, float]:
     """
-    Computes invested value, current value, P&L, and weights for holdings.
+    Computes invested value, current value, P&L, and weights for holdings,
+    overlaying live quotes from the market data feed if available.
     """
+    quotes = quotes or {}
     total_invested = 0.0
     total_current_value = 0.0
 
@@ -24,7 +30,11 @@ def compute_holdings_metrics(holdings: List[dict]) -> Tuple[List[HoldingResponse
     for h in holdings:
         qty = float(h.get("quantity", 0.0))
         avg_buy = float(h.get("avg_buy_price", 0.0))
-        curr_price = float(h.get("current_price") or avg_buy)
+        raw_sym = str(h.get("symbol", ""))
+        can_sym = SymbolNormalizer.to_canonical(raw_sym)
+        
+        quote = quotes.get(can_sym) or quotes.get(raw_sym) or {}
+        curr_price = float(quote.get("price") if quote.get("price") is not None else (h.get("current_price") or avg_buy))
 
         invested = qty * avg_buy
         curr_val = qty * curr_price
@@ -38,8 +48,8 @@ def compute_holdings_metrics(holdings: List[dict]) -> Tuple[List[HoldingResponse
             "id": str(h.get("_id", "")),
             "portfolio_id": str(h.get("portfolio_id", "")),
             "user_id": str(h.get("user_id", "")),
-            "symbol": str(h.get("symbol", "")),
-            "company_name": str(h.get("company_name", h.get("symbol", ""))),
+            "symbol": raw_sym,
+            "company_name": str(h.get("company_name", raw_sym)),
             "asset_type": str(h.get("asset_type", "Equity")),
             "sector": str(h.get("sector", "Other")),
             "quantity": qty,

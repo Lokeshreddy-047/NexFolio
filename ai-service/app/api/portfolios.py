@@ -37,6 +37,7 @@ from app.services.portfolio_analytics_service import (
 )
 from app.services.command_center_service import build_command_center_overview
 from app.services.benchmark_service import get_nifty_benchmark_points
+from app.services.market_data.manager import market_data_manager
 
 router = APIRouter(prefix="/portfolios", tags=["Portfolios"])
 
@@ -92,7 +93,9 @@ async def list_user_portfolios(
     for p in portfolios:
         port_id = p["_id"]
         raw_holdings = await get_holdings_by_portfolio(portfolio_id=port_id, user_id=current_user.uid)
-        _, invested, curr_val, pnl, pnl_pct = compute_holdings_metrics(raw_holdings)
+        symbols = [h.get("symbol", "") for h in raw_holdings if h.get("symbol")]
+        live_quotes = await market_data_manager.get_batch_quotes(symbols) if symbols else {}
+        _, invested, curr_val, pnl, pnl_pct = compute_holdings_metrics(raw_holdings, quotes=live_quotes)
 
         summaries.append(PortfolioSummary(
             id=port_id,
@@ -132,11 +135,19 @@ async def get_portfolio_command_center(
     raw_holdings = await get_holdings_by_portfolio(portfolio_id=portfolio_id, user_id=current_user.uid)
     recent_transactions = await get_transactions_by_user(user_id=current_user.uid, portfolio_id=portfolio_id, limit=5)
 
+    symbols = [h.get("symbol", "") for h in raw_holdings if h.get("symbol")]
+    live_quotes = await market_data_manager.get_batch_quotes(symbols) if symbols else {}
+
+    current_badge = getattr(market_data_manager.active_provider, "default_data_badge", None)
+    badge_str = current_badge.value if current_badge else "LIVE"
+
     return build_command_center_overview(
         user_id=current_user.uid,
         portfolio_doc=portfolio_doc,
         raw_holdings=raw_holdings,
-        recent_transactions=recent_transactions
+        recent_transactions=recent_transactions,
+        quotes=live_quotes,
+        data_badge=badge_str
     )
 
 
@@ -289,7 +300,9 @@ async def get_portfolio_details(
         )
 
     raw_holdings = await get_holdings_by_portfolio(portfolio_id=portfolio_id, user_id=current_user.uid)
-    holdings, invested, curr_val, pnl, pnl_pct = compute_holdings_metrics(raw_holdings)
+    symbols = [h.get("symbol", "") for h in raw_holdings if h.get("symbol")]
+    live_quotes = await market_data_manager.get_batch_quotes(symbols) if symbols else {}
+    holdings, invested, curr_val, pnl, pnl_pct = compute_holdings_metrics(raw_holdings, quotes=live_quotes)
     asset_alloc, sector_alloc = compute_allocations(holdings, curr_val)
 
     return PortfolioDetail(

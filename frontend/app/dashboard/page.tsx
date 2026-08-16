@@ -18,6 +18,8 @@ import {
 import { useAuth } from "@/components/auth-provider";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
+import { DataPedigreeBadge } from "@/components/data-badge";
+import { useMarketFeed } from "@/lib/useMarketFeed";
 import {
   getPortfolios,
   getCommandCenter,
@@ -69,8 +71,19 @@ export default function DashboardPage() {
   const [timelineMetric, setTimelineMetric] = useState<"VALUE" | "RETURN" | "PNL">("VALUE");
   const [compareBenchmark, setCompareBenchmark] = useState<boolean>(true);
 
-  // Interactive Sector Drill-Down filter
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
+
+  // Live SSE market tick feed for movers
+  const moverSymbols = useMemo(() => {
+    if (!overview) return [];
+    const symbols = [
+      ...overview.top_movers.gainers.map((m) => m.symbol),
+      ...overview.top_movers.losers.map((m) => m.symbol),
+    ];
+    return Array.from(new Set(symbols));
+  }, [overview]);
+
+  const { ticks, connectionStatus, activeBadge, flashStates } = useMarketFeed(moverSymbols);
 
   // Authentication guard
   useEffect(() => {
@@ -282,10 +295,13 @@ export default function DashboardPage() {
                   <span className="text-xs font-bold uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
                     Command Center Pulse
                   </span>
-                  <span className="text-xs font-medium text-slate-400 bg-slate-800/60 border border-slate-700/50 px-2.5 py-1 rounded-full flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Data: <strong className="text-slate-200">{pulse?.data_badge || "REFERENCE"}</strong>
-                  </span>
+                  <DataPedigreeBadge badge={pulse?.data_badge || activeBadge} />
+                  {connectionStatus === "connected" && (
+                    <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      LIVE FEED ACTIVE
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap items-baseline gap-4">
@@ -553,44 +569,56 @@ export default function DashboardPage() {
 
                 <div className="space-y-2.5">
                   {movers?.gainers && movers.gainers.length > 0 ? (
-                    movers.gainers.slice(0, 3).map((g) => (
-                      <div
-                        key={g.symbol}
-                        onClick={() => setSelectedSector(g.sector)}
-                        className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/60 hover:border-emerald-500/40 cursor-pointer transition-all text-xs"
-                      >
-                        <div>
-                          <div className="font-bold text-slate-200">{g.symbol}</div>
-                          <div className="text-[10px] text-slate-400 truncate max-w-[120px]">{g.company_name}</div>
+                    movers.gainers.slice(0, 3).map((g) => {
+                      const flash = flashStates[g.symbol] || flashStates[`${g.symbol}.NS`];
+                      const flashClass = flash === "up" ? "bg-emerald-500/20" : flash === "down" ? "bg-rose-500/20" : "";
+                      const liveTick = ticks[g.symbol] || ticks[`${g.symbol}.NS`];
+                      const dayPct = liveTick ? liveTick.day_change_pct : g.day_change_pct;
+                      return (
+                        <div
+                          key={g.symbol}
+                          onClick={() => setSelectedSector(g.sector)}
+                          className={`flex items-center justify-between p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/60 hover:border-emerald-500/40 cursor-pointer transition-all duration-500 text-xs ${flashClass}`}
+                        >
+                          <div>
+                            <div className="font-bold text-slate-200">{g.symbol}</div>
+                            <div className="text-[10px] text-slate-400 truncate max-w-[120px]">{g.company_name}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-emerald-400">+{dayPct.toFixed(2)}%</div>
+                            <div className="text-[10px] text-slate-400">{formatINR(g.day_pnl_contribution)}</div>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <div className="font-bold text-emerald-400">+{g.day_change_pct.toFixed(2)}%</div>
-                          <div className="text-[10px] text-slate-400">{formatINR(g.day_pnl_contribution)}</div>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="text-xs text-slate-500 py-6 text-center">No open holdings to calculate movers</div>
                   )}
 
                   {movers?.losers && movers.losers.length > 0 && (
                     <div className="pt-2 border-t border-slate-800/60">
-                      {movers.losers.slice(0, 2).map((l) => (
-                        <div
-                          key={l.symbol}
-                          onClick={() => setSelectedSector(l.sector)}
-                          className="flex items-center justify-between p-2 rounded-xl bg-slate-950/40 border border-slate-800/40 hover:border-rose-500/40 cursor-pointer transition-all text-xs mb-1.5"
-                        >
-                          <div>
-                            <div className="font-bold text-slate-300">{l.symbol}</div>
-                            <div className="text-[10px] text-slate-500 truncate max-w-[120px]">{l.company_name}</div>
+                      {movers.losers.slice(0, 2).map((l) => {
+                        const flash = flashStates[l.symbol] || flashStates[`${l.symbol}.NS`];
+                        const flashClass = flash === "up" ? "bg-emerald-500/20" : flash === "down" ? "bg-rose-500/20" : "";
+                        const liveTick = ticks[l.symbol] || ticks[`${l.symbol}.NS`];
+                        const dayPct = liveTick ? liveTick.day_change_pct : l.day_change_pct;
+                        return (
+                          <div
+                            key={l.symbol}
+                            onClick={() => setSelectedSector(l.sector)}
+                            className={`flex items-center justify-between p-2 rounded-xl bg-slate-950/40 border border-slate-800/40 hover:border-rose-500/40 cursor-pointer transition-all duration-500 text-xs mb-1.5 ${flashClass}`}
+                          >
+                            <div>
+                              <div className="font-bold text-slate-300">{l.symbol}</div>
+                              <div className="text-[10px] text-slate-500 truncate max-w-[120px]">{l.company_name}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold text-rose-400">{dayPct.toFixed(2)}%</div>
+                              <div className="text-[10px] text-slate-500">{formatINR(l.day_pnl_contribution)}</div>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <div className="font-bold text-rose-400">{l.day_change_pct.toFixed(2)}%</div>
-                            <div className="text-[10px] text-slate-500">{formatINR(l.day_pnl_contribution)}</div>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

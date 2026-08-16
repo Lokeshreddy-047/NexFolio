@@ -30,6 +30,7 @@ import {
   BarChart3,
   Check
 } from "lucide-react";
+import { DataPedigreeBadge } from "@/components/data-badge";
 
 export default function IntelligencePage() {
   const [portfolios, setPortfolios] = useState<PortfolioSummary[]>([]);
@@ -255,9 +256,7 @@ export default function IntelligencePage() {
                   <span className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 font-medium">
                     Dataset: {intelligence.provenance.feature_dataset_version}
                   </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-teal-500/10 text-teal-300 border border-teal-500/20 font-bold">
-                    Pedigree: {intelligence.provenance.data_quality_badge}
-                  </span>
+                  <DataPedigreeBadge badge={intelligence.provenance.data_quality_badge} />
                   <span className={`px-2.5 py-1 rounded-lg font-bold border ${
                     intelligence.provenance.data_sufficiency_status === "READY"
                       ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"

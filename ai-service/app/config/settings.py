@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     firebase_credentials_json: str = ""
     dev_auth_enabled: bool = True
 
+    # Market Data Feed Layer
+    market_data_mode: str = "reference"
+    market_data_provider: str = "reference"
+    upstox_client_id: str = ""
+    upstox_client_secret: str = ""
+    upstox_access_token: str = ""
+    upstox_feed_url: str = "wss://api.upstox.com/v2/feed/market-data-feed"
+
     @property
     def allowed_origins(self) -> list[str]:
         raw_value = self.frontend_urls or self.frontend_url

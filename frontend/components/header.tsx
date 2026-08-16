@@ -12,6 +12,7 @@ import {
   markAllNotificationsRead,
   NotificationItem
 } from "@/lib/api";
+import { useTheme } from "./theme-provider";
 import {
   Briefcase,
   Plus,
@@ -19,7 +20,10 @@ import {
   Check,
   ChevronDown,
   LogOut,
-  Shield
+  Shield,
+  Sun,
+  Moon,
+  Laptop
 } from "lucide-react";
 
 interface HeaderProps {
@@ -36,9 +40,11 @@ export function Header({
   onPortfolioChange,
 }: HeaderProps) {
   const { user, signOut } = useAuth();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const [portfolios, setPortfolios] = useState<PortfolioSummary[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isThemeOpen, setIsThemeOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -221,6 +227,7 @@ export function Header({
                 setIsNotificationOpen(!isNotificationOpen);
                 setIsDropdownOpen(false);
                 setIsProfileOpen(false);
+                setIsThemeOpen(false);
               }}
               className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-colors relative"
               title="Notifications"
@@ -314,12 +321,106 @@ export function Header({
             )}
           </div>
 
+          {/* Theme Selector Popover */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setIsThemeOpen(!isThemeOpen);
+                setIsNotificationOpen(false);
+                setIsDropdownOpen(false);
+                setIsProfileOpen(false);
+              }}
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-colors"
+              title={`Active Theme: ${theme.toUpperCase()} (${resolvedTheme} mode)`}
+            >
+              {resolvedTheme === "light" ? (
+                <Sun size={18} className="text-amber-400" />
+              ) : theme === "system" ? (
+                <Laptop size={18} className="text-indigo-400" />
+              ) : (
+                <Moon size={18} className="text-teal-400" />
+              )}
+            </button>
+
+            {isThemeOpen && (
+              <>
+                <div
+                  onClick={() => setIsThemeOpen(false)}
+                  className="fixed inset-0 z-40"
+                />
+                <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-1">
+                  <div className="px-3 py-1.5 border-b border-slate-800/80 mb-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      UI Theme
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setTheme("dark");
+                      setIsThemeOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-left transition-colors ${
+                      theme === "dark"
+                        ? "bg-teal-500/10 text-teal-300 font-bold border border-teal-500/20"
+                        : "text-slate-300 hover:bg-slate-800/80"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Moon size={14} className="text-teal-400" />
+                      <span>Dark (Obsidian)</span>
+                    </div>
+                    {theme === "dark" && <Check size={14} className="text-teal-400" />}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setTheme("light");
+                      setIsThemeOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-left transition-colors ${
+                      theme === "light"
+                        ? "bg-amber-500/10 text-amber-500 font-bold border border-amber-500/20"
+                        : "text-slate-300 hover:bg-slate-800/80"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Sun size={14} className="text-amber-500" />
+                      <span>Light (Clean)</span>
+                    </div>
+                    {theme === "light" && <Check size={14} className="text-amber-500" />}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setTheme("system");
+                      setIsThemeOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-left transition-colors ${
+                      theme === "system"
+                        ? "bg-indigo-500/10 text-indigo-300 font-bold border border-indigo-500/20"
+                        : "text-slate-300 hover:bg-slate-800/80"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Laptop size={14} className="text-indigo-400" />
+                      <span>System Sync</span>
+                    </div>
+                    {theme === "system" && <Check size={14} className="text-indigo-400" />}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
           {/* Profile Dropdown */}
           <div className="relative">
             <button
               onClick={() => {
                 setIsProfileOpen(!isProfileOpen);
                 setIsDropdownOpen(false);
+                setIsThemeOpen(false);
+                setIsNotificationOpen(false);
               }}
               className="p-1 rounded-full ring-2 ring-emerald-500/20 hover:ring-emerald-500/40 transition-all"
             >

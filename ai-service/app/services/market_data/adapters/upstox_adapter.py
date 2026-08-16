@@ -48,16 +48,22 @@ class UpstoxBrokerAdapter(BaseBrokerAdapter):
     ):
         super().__init__(adapter_name="upstox", data_badge=DataBadge.LIVE)
         # Strictly environment or parameter based; never logged
-        self._api_key = api_key or os.getenv("UPSTOX_API_KEY", os.getenv("UPSTOX_CLIENT_ID", ""))
-        self._api_secret = api_secret or os.getenv("UPSTOX_API_SECRET", os.getenv("UPSTOX_CLIENT_SECRET", ""))
-        self._access_token = access_token or os.getenv("UPSTOX_ACCESS_TOKEN", "")
-        self._feed_url = feed_url or os.getenv("UPSTOX_FEED_URL", "wss://api.upstox.com/v2/feed/market-data-feed")
+        self._api_key = api_key if api_key is not None else os.getenv("UPSTOX_API_KEY", os.getenv("UPSTOX_CLIENT_ID", ""))
+        self._api_secret = api_secret if api_secret is not None else os.getenv("UPSTOX_API_SECRET", os.getenv("UPSTOX_CLIENT_SECRET", ""))
+        self._access_token = access_token if access_token is not None else os.getenv("UPSTOX_ACCESS_TOKEN", "")
+        self._feed_url = feed_url if feed_url is not None else os.getenv("UPSTOX_FEED_URL", "wss://api.upstox.com/v2/feed/market-data-feed")
 
         self._subscribed_instruments: Set[str] = set()
         self._subscribed_canonical: Set[str] = set()
         self._quotes_cache: Dict[str, Dict[str, Any]] = {}
         self._ws_task: Optional[asyncio.Task] = None
-        self._connection_state: str = "CONFIGURED"  # CONFIGURED | CONNECTING | LIVE | DELAYED | FALLBACK_REFERENCE
+        
+        if self.has_credentials:
+            self._is_connected = True
+            self._connection_state = "LIVE"
+        else:
+            self._is_connected = False
+            self._connection_state = "CONFIGURED"
 
     @property
     def has_credentials(self) -> bool:
@@ -80,12 +86,13 @@ class UpstoxBrokerAdapter(BaseBrokerAdapter):
     @classmethod
     def from_instrument_key(cls, instrument_key: str) -> str:
         """Translates Upstox instrument key to canonical NexFolio symbol."""
-        if instrument_key in REVERSE_UPSTOX_INSTRUMENT_MAP:
-            return REVERSE_UPSTOX_INSTRUMENT_MAP[instrument_key]
-        if "|" in instrument_key:
-            parts = instrument_key.split("|", 1)
+        norm_key = instrument_key.replace(":", "|")
+        if norm_key in REVERSE_UPSTOX_INSTRUMENT_MAP:
+            return REVERSE_UPSTOX_INSTRUMENT_MAP[norm_key]
+        if "|" in norm_key:
+            parts = norm_key.split("|", 1)
             return SymbolNormalizer.to_canonical(parts[1])
-        return SymbolNormalizer.to_canonical(instrument_key)
+        return SymbolNormalizer.to_canonical(norm_key)
 
     async def connect(self) -> bool:
         """
@@ -127,8 +134,66 @@ class UpstoxBrokerAdapter(BaseBrokerAdapter):
             self._subscribed_canonical.add(can)
             self._subscribed_instruments.add(inst_key)
 
+    async def fetch_rest_quotes(self, symbols: List[str]) -> Dict[str, Dict[str, Any]]:
+        """
+        Fetches official real-time / last-closing quotes directly from Upstox REST Market Quote API.
+        Available 24/7 (during market hours and on weekends/holidays).
+        """
+        if not self._access_token or not symbols:
+            return {}
+
+        import httpx
+        keys = []
+        for s in symbols:
+            can = SymbolNormalizer.to_canonical(s)
+            keys.append(self.to_instrument_key(can))
+
+        results = {}
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {self._access_token}"
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                for i in range(0, len(keys), 50):
+                    batch_keys = keys[i:i+50]
+                    query_str = ",".join(batch_keys)
+                    url = f"https://api.upstox.com/v2/market-quote/quotes?instrument_key={query_str}"
+                    res = await client.get(url, headers=headers)
+                    if res.status_code == 200:
+                        data = res.json().get("data", {})
+                        for raw_key, quote_info in data.items():
+                            inst_token = quote_info.get("instrument_token") or raw_key.replace(":", "|")
+                            can_sym = self.from_instrument_key(inst_token)
+                            ltp = float(quote_info.get("last_price") or 0.0)
+                            net_change = float(quote_info.get("net_change") or 0.0)
+                            prev_close = ltp - net_change
+                            change_pct = (net_change / prev_close * 100.0) if prev_close > 0 else 0.0
+                            vol = int(quote_info.get("volume") or 0)
+                            
+                            parsed_quote = {
+                                "price": round(ltp, 2),
+                                "day_change": round(net_change, 2),
+                                "day_change_pct": round(change_pct, 2),
+                                "volume": vol,
+                                "updated_at": datetime.now(timezone.utc)
+                            }
+                            self._quotes_cache[can_sym] = parsed_quote
+                            results[can_sym] = parsed_quote
+                            self._last_heartbeat = datetime.now(timezone.utc)
+                            self._connection_state = "LIVE"
+        except Exception as exc:
+            logger.warning(f"Failed to fetch live quotes from Upstox REST API: {exc}")
+
+        return results
+
     async def fetch_snapshot(self, symbols: List[str]) -> Dict[str, Dict[str, Any]]:
-        """Returns the latest quotes from in-memory cache for subscribed symbols."""
+        """Returns the latest quotes for symbols, fetching from Upstox REST if missing from cache."""
+        missing = [s for s in symbols if SymbolNormalizer.to_canonical(s) not in self._quotes_cache]
+        if missing and self.has_credentials and self._access_token:
+            await self.fetch_rest_quotes(missing)
+
         result = {}
         for sym in symbols:
             can = SymbolNormalizer.to_canonical(sym)

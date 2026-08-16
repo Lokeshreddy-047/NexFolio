@@ -958,3 +958,172 @@ export async function markAllNotificationsRead(): Promise<{ status: string; mark
     method: "POST",
   });
 }
+
+// ---------------------------------------------------------------------------
+// 9. Indian Capital Gains & Tax Loss Harvesting Module (Income-tax Act, 2025)
+// ---------------------------------------------------------------------------
+
+export interface TaxRuleSet {
+  rule_set_id: string;
+  law: string;
+  tax_year: string;
+  effective_from: string;
+  effective_to?: string;
+  equity_stcg_rate: number;
+  equity_ltcg_rate: number;
+  section_112a_exemption: number;
+  listed_equity_holding_period_months: number;
+  unlisted_equity_holding_period_months: number;
+  buyback_promoter_domestic_rate: number;
+  buyback_promoter_other_rate: number;
+  surcharge_ceiling_special_rates: number;
+  cess_rate: number;
+  loss_carryforward_years: number;
+  statutory_notes: string;
+}
+
+export interface TaxLossBankItem {
+  loss_type: "STCL" | "LTCL";
+  available_amount: number;
+  usable_against: string;
+  oldest_source_tax_year: string;
+  expiry_tax_year: string;
+  days_to_expiry: number;
+}
+
+export interface TaxLossBank {
+  total_available_stcl: number;
+  total_available_ltcl: number;
+  total_banked_loss: number;
+  bank_items: TaxLossBankItem[];
+}
+
+export interface RealizedTradeLot {
+  lot_id: string;
+  transaction_id: string;
+  buy_tx_id?: string;
+  sell_tx_id?: string;
+  symbol: string;
+  company_name: string;
+  buy_date: string;
+  sell_date: string;
+  holding_period_months: number;
+  holding_period_days: number;
+  quantity: number;
+  buy_price: number;
+  sell_price: number;
+  cost_basis: number;
+  sale_proceeds: number;
+  realized_pnl: number;
+  realized_pnl_pct: number;
+  is_buyback: boolean;
+  promoter_category: string;
+  classification: string;
+  base_tax_rate: number;
+  stt_paid: number;
+  rule_set_id: string;
+}
+
+export interface Section112ATracker {
+  annual_threshold: number;
+  gross_112a_gains: number;
+  ltcl_absorbed: number;
+  stcl_absorbed: number;
+  net_112a_ltcg_before_exemption: number;
+  threshold_consumed: number;
+  threshold_remaining: number;
+  taxable_112a_ltcg: number;
+  estimated_112a_base_tax: number;
+}
+
+export interface CapitalGainsSchedule {
+  tax_year: string;
+  governing_law: string;
+  gross_stcg: number;
+  gross_stcl: number;
+  stcl_setoff_against_stcg: number;
+  net_stcg: number;
+  taxable_stcg: number;
+  estimated_stcg_base_tax: number;
+  section_112a: Section112ATracker;
+  buyback_proceeds: number;
+  buyback_cost_basis: number;
+  buyback_net_gain: number;
+  buyback_base_tax: number;
+  legacy_losses_absorbed: number;
+  unabsorbed_stcl_to_bank: number;
+  unabsorbed_ltcl_to_bank: number;
+  total_base_tax: number;
+  applicable_surcharge_rate: number;
+  surcharge_amount: number;
+  cess_rate: number;
+  cess_amount: number;
+  total_estimated_tax_liability: number;
+}
+
+export interface TaxLossHarvestingCandidate {
+  holding_id?: string;
+  symbol: string;
+  company_name: string;
+  sector: string;
+  quantity: number;
+  avg_buy_price: number;
+  current_price: number;
+  current_value: number;
+  invested_amount: number;
+  unrealized_pnl: number;
+  unrealized_pnl_pct: number;
+  holding_period_months: number;
+  holding_period_days: number;
+  loss_classification: "POTENTIAL_STCL" | "POTENTIAL_LTCL";
+  portfolio_weight_pct: number;
+  harvestable_loss: number;
+  allowable_setoff_amount: number;
+  estimated_incremental_tax_saving: number;
+  recommendation_rationale: string;
+}
+
+export interface TaxLossHarvestingAnalysis {
+  total_unrealized_losses: number;
+  short_term_harvestable_losses: number;
+  long_term_harvestable_losses: number;
+  total_estimated_potential_tax_reduction: number;
+  post_harvest_estimated_tax_liability: number;
+  candidates_count: number;
+  candidates: TaxLossHarvestingCandidate[];
+}
+
+export interface TaxReportResponse {
+  portfolio_id: string;
+  portfolio_name: string;
+  currency: string;
+  generated_at: string;
+  rule_set: TaxRuleSet;
+  capital_gains: CapitalGainsSchedule;
+  tax_loss_bank: TaxLossBank;
+  loss_harvesting: TaxLossHarvestingAnalysis;
+  realized_lots: RealizedTradeLot[];
+  disclaimer: string;
+}
+
+export async function getPortfolioTaxReport(
+  portfolioId: string,
+  taxYear?: string
+): Promise<TaxReportResponse> {
+  const qs = taxYear ? `?tax_year=${encodeURIComponent(taxYear)}` : "";
+  return apiRequest<TaxReportResponse>(`/api/v1/portfolios/${portfolioId}/tax-report${qs}`);
+}
+
+export async function getPortfolioTaxReportCSV(
+  portfolioId: string,
+  taxYear?: string
+): Promise<string> {
+  const qs = taxYear ? `?tax_year=${encodeURIComponent(taxYear)}` : "";
+  const token = typeof window !== "undefined" ? localStorage.getItem("nexfolio_token") : null;
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const res = await fetch(`${baseUrl}/api/v1/portfolios/${portfolioId}/tax-report/export-csv${qs}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+  if (!res.ok) throw new Error("Failed to export tax CSV");
+  return res.text();
+}

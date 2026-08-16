@@ -35,7 +35,7 @@ def test_upstox_token_translation_mapping():
 async def test_upstox_adapter_lifecycle_and_sanitized_state():
     """Verifies that missing credentials degrade safely without crashing."""
     # 1. Without credentials
-    adapter_no_creds = UpstoxBrokerAdapter(access_token="")
+    adapter_no_creds = UpstoxBrokerAdapter(api_key="", api_secret="", access_token="")
     assert adapter_no_creds.has_credentials is False
     connected = await adapter_no_creds.connect()
     assert connected is False

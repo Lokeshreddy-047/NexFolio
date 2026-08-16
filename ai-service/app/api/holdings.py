@@ -13,6 +13,7 @@ from app.repositories.holding_repository import (
     delete_holding
 )
 from app.services.portfolio_analytics_service import compute_holdings_metrics
+from app.services.market_data.manager import market_data_manager
 
 router = APIRouter(prefix="/holdings", tags=["Holdings & Investments"])
 
@@ -39,7 +40,9 @@ async def add_holding(
     )
 
     raw_holdings = await get_holdings_by_portfolio(payload.portfolio_id, user_id=current_user.uid)
-    computed_holdings, _, _, _, _ = compute_holdings_metrics(raw_holdings)
+    symbols = [h.get("symbol", "") for h in raw_holdings if h.get("symbol")]
+    live_quotes = await market_data_manager.get_batch_quotes(symbols) if symbols else {}
+    computed_holdings, _, _, _, _ = compute_holdings_metrics(raw_holdings, quotes=live_quotes)
 
     for h in computed_holdings:
         if h.id == str(holding_doc["_id"]):
@@ -82,7 +85,9 @@ async def list_holdings_for_portfolio(
         )
 
     raw_holdings = await get_holdings_by_portfolio(portfolio_id, user_id=current_user.uid)
-    computed_holdings, _, _, _, _ = compute_holdings_metrics(raw_holdings)
+    symbols = [h.get("symbol", "") for h in raw_holdings if h.get("symbol")]
+    live_quotes = await market_data_manager.get_batch_quotes(symbols) if symbols else {}
+    computed_holdings, _, _, _, _ = compute_holdings_metrics(raw_holdings, quotes=live_quotes)
     return computed_holdings
 
 

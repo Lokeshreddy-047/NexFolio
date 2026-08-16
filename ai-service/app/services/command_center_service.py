@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Optional, Any
 from app.schemas.command_center import (
     CommandCenterOverviewResponse,
     PulseMetrics,
@@ -16,30 +16,42 @@ from app.services.portfolio_analytics_service import (
     calculate_health_score
 )
 from app.services.prediction_service import predict_portfolio_risk
+from app.services.market_data.symbol_normalizer import SymbolNormalizer
 
 
 def build_command_center_overview(
     user_id: str,
     portfolio_doc: dict,
     raw_holdings: List[dict],
-    recent_transactions: List[dict]
+    recent_transactions: List[dict],
+    quotes: Dict[str, Dict[str, Any]] = None,
+    data_badge: str = "LIVE"
 ) -> CommandCenterOverviewResponse:
-    holdings, invested, curr_val, pnl, pnl_pct = compute_holdings_metrics(raw_holdings)
+    quotes = quotes or {}
+    holdings, invested, curr_val, pnl, pnl_pct = compute_holdings_metrics(raw_holdings, quotes=quotes)
     asset_alloc, sector_alloc = compute_allocations(holdings, curr_val)
     features = derive_institutional_features(holdings, invested, curr_val)
     prediction = predict_portfolio_risk(features)
     health_score = calculate_health_score(features)
 
-    # 1. Top Movers Calculation
+    # 1. Top Movers Calculation with live quote changes
     movers_pool = []
     total_day_pnl = 0.0
 
     for h in holdings:
-        # Reference heuristic for day change if live ticker socket is offline
-        # Derives a deterministic day movement based on volatility & asset type
-        ret_signal = (h.unrealized_pnl_pct * 0.1) if abs(h.unrealized_pnl_pct) > 0.5 else 0.85
-        day_chg_pct = round(max(-6.5, min(8.5, ret_signal)), 2)
-        day_contribution = round(h.current_value * (day_chg_pct / 100.0), 2)
+        can_sym = SymbolNormalizer.to_canonical(h.symbol)
+        quote = quotes.get(can_sym) or quotes.get(h.symbol) or {}
+        
+        day_chg = float(quote.get("day_change", 0.0))
+        day_chg_pct = float(quote.get("day_change_pct", 0.0))
+        
+        # If quote not in live feed, use reference heuristic
+        if not quote and abs(h.unrealized_pnl_pct) > 0.5:
+            day_chg_pct = round(max(-6.5, min(8.5, h.unrealized_pnl_pct * 0.1)), 2)
+            day_contribution = round(h.current_value * (day_chg_pct / 100.0), 2)
+        else:
+            day_contribution = round(h.quantity * day_chg, 2)
+            
         total_day_pnl += day_contribution
 
         movers_pool.append(TopMover(
@@ -115,7 +127,7 @@ def build_command_center_overview(
         total_roi_pct=pnl_pct,
         realized_pnl=portfolio_doc.get("realized_pnl", 0.0),
         holdings_count=len(holdings),
-        data_badge="REFERENCE"
+        data_badge=data_badge
     )
 
     # 5. Recent Activity

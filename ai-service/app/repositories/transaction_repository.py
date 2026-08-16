@@ -50,7 +50,7 @@ async def record_transaction(user_id: str, data: dict) -> dict:
             sector=sector,
             company_name=company_name
         )
-    elif tx_type == "SELL":
+    elif tx_type in ("SELL", "BUYBACK"):
         await apply_sell_transaction(
             user_id=user_id,
             portfolio_id=portfolio_id,
@@ -73,6 +73,8 @@ async def record_transaction(user_id: str, data: dict) -> dict:
         "sector": sector,
         "transaction_date": tx_date,
         "notes": data.get("notes", ""),
+        "promoter_category": data.get("promoter_category", "NON_PROMOTER"),
+        "stt_paid": float(data.get("stt_paid", 0.0)),
         "created_at": now,
     }
 

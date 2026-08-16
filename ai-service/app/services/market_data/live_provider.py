@@ -139,20 +139,37 @@ class LiveMarketProvider(MarketDataProvider):
         base_resp = await self._fallback.get_market_overview()
         base_resp.data_badge = badge.value
         base_resp.provider = self.provider_id
+        base_resp.market_date = now_utc.strftime("%b %d, %Y")
         base_resp.updated_at = now_utc.isoformat()
         base_resp.market_session = session_state.value
         base_resp.is_stale = is_stale
         if is_stale:
             base_resp.fallback_reason = reason
 
-        # Overlay any major index updates
+        # Overlay any major index updates from adapter snapshots or live stream
+        index_symbols = [idx.symbol for idx in base_resp.indices]
+        adapter_quotes = await self._adapter.fetch_snapshot(index_symbols)
+
         for idx in base_resp.indices:
             can_sym = SymbolNormalizer.to_canonical(idx.symbol)
-            if can_sym in self._live_quotes_override:
-                ov = self._live_quotes_override[can_sym]
+            ov = self._live_quotes_override.get(can_sym) or adapter_quotes.get(can_sym)
+            if ov:
                 idx.current_level = ov["price"]
                 idx.day_change = ov["day_change"]
                 idx.day_change_pct = ov["day_change_pct"]
+
+        # Overlay top gainers, losers, and most active
+        all_movers = base_resp.top_gainers + base_resp.top_losers + base_resp.most_active
+        mover_symbols = [m.symbol for m in all_movers]
+        mover_quotes = await self._adapter.fetch_snapshot(mover_symbols)
+        for m in all_movers:
+            can_sym = SymbolNormalizer.to_canonical(m.symbol)
+            ov = self._live_quotes_override.get(can_sym) or mover_quotes.get(can_sym)
+            if ov:
+                m.current_price = ov["price"]
+                m.day_change = ov["day_change"]
+                m.day_change_pct = ov["day_change_pct"]
+                m.volume = ov.get("volume", m.volume)
 
         return base_resp
 
@@ -183,15 +200,18 @@ class LiveMarketProvider(MarketDataProvider):
             query, sector, preset, sort_by, sort_order, limit, offset
         )
 
-        # Overlay live ticks on returned stock batch
+        # Overlay live quotes from adapter snapshots or live stream overrides
+        returned_symbols = [s.symbol for s in base_resp.stocks]
+        adapter_quotes = await self._adapter.fetch_snapshot(returned_symbols)
+
         for stock in base_resp.stocks:
             can_sym = SymbolNormalizer.to_canonical(stock.symbol)
-            if can_sym in self._live_quotes_override:
-                ov = self._live_quotes_override[can_sym]
+            ov = self._live_quotes_override.get(can_sym) or adapter_quotes.get(can_sym)
+            if ov:
                 stock.current_price = ov["price"]
                 stock.day_change = ov["day_change"]
                 stock.day_change_pct = ov["day_change_pct"]
-                stock.volume = ov["volume"]
+                stock.volume = ov.get("volume", stock.volume)
 
         base_resp.data_badge = badge.value
         base_resp.provider = self.provider_id
@@ -223,14 +243,15 @@ class LiveMarketProvider(MarketDataProvider):
             detail.is_stale = True
             return detail
 
-        # Apply tick override
+        # Overlay live quote
         can_sym = SymbolNormalizer.to_canonical(symbol)
-        if can_sym in self._live_quotes_override:
-            ov = self._live_quotes_override[can_sym]
+        adapter_quotes = await self._adapter.fetch_snapshot([can_sym])
+        ov = self._live_quotes_override.get(can_sym) or adapter_quotes.get(can_sym)
+        if ov:
             detail.current_price = ov["price"]
             detail.day_change = ov["day_change"]
             detail.day_change_pct = ov["day_change_pct"]
-            detail.volume = ov["volume"]
+            detail.volume = ov.get("volume", detail.volume)
 
         detail.data_badge = badge.value
         detail.provider = self.provider_id
@@ -244,15 +265,16 @@ class LiveMarketProvider(MarketDataProvider):
 
     async def get_batch_quotes(self, symbols: List[str]) -> Dict[str, Dict[str, float]]:
         quotes = await self._fallback.get_batch_quotes(symbols)
+        adapter_quotes = await self._adapter.fetch_snapshot(symbols)
         for sym in symbols:
             can_sym = SymbolNormalizer.to_canonical(sym)
-            if can_sym in self._live_quotes_override:
-                ov = self._live_quotes_override[can_sym]
+            ov = self._live_quotes_override.get(can_sym) or adapter_quotes.get(can_sym)
+            if ov:
                 quotes[can_sym] = {
                     "price": ov["price"],
                     "day_change": ov["day_change"],
                     "day_change_pct": ov["day_change_pct"],
-                    "volume": float(ov["volume"])
+                    "volume": float(ov.get("volume", 0))
                 }
         return quotes
 

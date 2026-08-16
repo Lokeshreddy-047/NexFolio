@@ -196,10 +196,10 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex">
+    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
       <Sidebar />
 
-      <main className="flex-1 lg:pl-64 min-w-0 flex flex-col">
+      <div className="flex flex-col flex-1 min-w-0">
         <Header
           title="Transaction Ledger"
           subtitle="Audit trail of buy and sell orders feeding portfolio cost-basis & realized returns"
@@ -207,7 +207,7 @@ export default function TransactionsPage() {
           onPortfolioChange={(id) => setSelectedPortfolioId(id)}
         />
 
-        <div className="p-4 md:p-8 space-y-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 lg:p-8 space-y-6 max-w-[1600px] w-full mx-auto">
           {/* Top KPI Metrics Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80">
@@ -405,8 +405,8 @@ export default function TransactionsPage() {
               </div>
             )}
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
 
       {/* Record Transaction Modal */}
       {isRecordOpen && (

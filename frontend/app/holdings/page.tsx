@@ -23,14 +23,24 @@ import {
   Search,
   Trash2,
   Edit3,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Zap
 } from "lucide-react";
+import { DataPedigreeBadge } from "@/components/data-badge";
+import { useMarketFeed } from "@/lib/useMarketFeed";
 
 export default function HoldingsPage() {
   const { user, loading: authLoading } = useAuth();
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>("");
   const [holdings, setHoldings] = useState<HoldingItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Live SSE market tick feed
+  const streamSymbols = React.useMemo(() => {
+    return holdings.map((h) => h.symbol);
+  }, [holdings]);
+
+  const { ticks, connectionStatus, activeBadge, flashStates } = useMarketFeed(streamSymbols);
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -187,11 +197,38 @@ export default function HoldingsPage() {
     }
   };
 
+  // Map live ticks over holdings
+  const liveHoldings = React.useMemo(() => {
+    const totalCurrentVal = holdings.reduce((sum, h) => {
+      const liveTick = ticks[h.symbol] || ticks[`${h.symbol}.NS`];
+      const curPrice = liveTick ? liveTick.price : h.current_price;
+      return sum + (h.quantity * curPrice);
+    }, 0);
+
+    return holdings.map((h) => {
+      const liveTick = ticks[h.symbol] || ticks[`${h.symbol}.NS`];
+      const currentPrice = liveTick ? liveTick.price : h.current_price;
+      const currentValue = h.quantity * currentPrice;
+      const unrealizedPnl = currentValue - h.invested_value;
+      const unrealizedPnlPct = h.invested_value > 0 ? (unrealizedPnl / h.invested_value) * 100 : 0;
+      const weight = totalCurrentVal > 0 ? (currentValue / totalCurrentVal) * 100 : h.weight;
+
+      return {
+        ...h,
+        current_price: currentPrice,
+        current_value: currentValue,
+        unrealized_pnl: unrealizedPnl,
+        unrealized_pnl_pct: unrealizedPnlPct,
+        weight: weight,
+      };
+    });
+  }, [holdings, ticks]);
+
   // Extract unique sectors
-  const sectors = Array.from(new Set(holdings.map((h) => h.sector || "Other"))).sort();
+  const sectors = Array.from(new Set(liveHoldings.map((h) => h.sector || "Other"))).sort();
 
   // Filtered holdings
-  const filteredHoldings = holdings.filter((h) => {
+  const filteredHoldings = liveHoldings.filter((h) => {
     const matchesSearch =
       h.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
       h.company_name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -204,8 +241,8 @@ export default function HoldingsPage() {
   });
 
   // Calculate totals for active portfolio
-  const activePortInvested = holdings.reduce((acc, h) => acc + h.invested_value, 0);
-  const activePortValue = holdings.reduce((acc, h) => acc + h.current_value, 0);
+  const activePortInvested = liveHoldings.reduce((acc, h) => acc + h.invested_value, 0);
+  const activePortValue = liveHoldings.reduce((acc, h) => acc + h.current_value, 0);
   const activePortPnl = activePortValue - activePortInvested;
   const activePortRoi = activePortInvested > 0 ? (activePortPnl / activePortInvested) * 100 : 0;
 
@@ -229,10 +266,10 @@ export default function HoldingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex">
+    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
       <Sidebar />
 
-      <main className="flex-1 lg:pl-64 min-w-0 flex flex-col">
+      <div className="flex flex-col flex-1 min-w-0">
         <Header
           title="Portfolio Holdings"
           subtitle="Real-time position tracking, weights, average cost basis & returns"
@@ -240,7 +277,21 @@ export default function HoldingsPage() {
           onPortfolioChange={(id) => setSelectedPortfolioId(id)}
         />
 
-        <div className="p-4 md:p-8 space-y-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 lg:p-8 space-y-6 max-w-[1600px] w-full mx-auto">
+          {/* Header Controls & Live Pedigree Badge */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-400">Market Feed:</span>
+              <DataPedigreeBadge badge={activeBadge} />
+              {connectionStatus === "connected" && (
+                <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                  <Zap size={11} />
+                  LIVE STREAM ACTIVE
+                </span>
+              )}
+            </div>
+          </div>
+
           {/* Top KPI Metrics Bar */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80">
@@ -382,8 +433,10 @@ export default function HoldingsPage() {
                   <tbody className="divide-y divide-slate-800/60 text-xs">
                     {filteredHoldings.map((h) => {
                       const isProfit = h.unrealized_pnl >= 0;
+                      const flash = flashStates[h.symbol] || flashStates[`${h.symbol}.NS`];
+                      const flashClass = flash === "up" ? "bg-emerald-500/20" : flash === "down" ? "bg-rose-500/20" : "";
                       return (
-                        <tr key={h.id} className="hover:bg-slate-800/40 transition-colors group">
+                        <tr key={h.id} className={`hover:bg-slate-800/40 transition-colors duration-500 group ${flashClass}`}>
                           {/* Symbol & Name */}
                           <td className="py-3.5 px-4">
                             <div className="flex flex-col">
@@ -479,8 +532,8 @@ export default function HoldingsPage() {
               </div>
             )}
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
 
       {/* Add Holding Modal */}
       {isAddOpen && (

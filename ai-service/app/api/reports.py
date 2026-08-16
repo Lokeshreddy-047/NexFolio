@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import APIRouter, Depends, Query, HTTPException, status, Response
 
 from app.schemas.user import UserPrincipal
 from app.dependencies.auth import get_current_user
@@ -9,11 +9,13 @@ from app.schemas.reports import (
     AuditLogListResponse,
     AuditLogItem
 )
+from app.schemas.tax import TaxReportResponse
 from app.services.report_service import (
     generate_portfolio_investor_report,
     list_portfolio_reports,
     get_saved_report_by_id
 )
+from app.services.tax_service import compute_portfolio_tax_report, generate_itr_schedule_csv
 from app.repositories.audit_repository import get_audit_logs_by_user
 
 router = APIRouter(tags=["Investor Reports & Audit"])
@@ -108,3 +110,55 @@ async def get_user_audit_logs(
         total_count=len(items),
         events=items
     )
+
+
+@router.get("/portfolios/{portfolio_id}/tax-report", response_model=TaxReportResponse)
+async def get_portfolio_tax_report(
+    portfolio_id: str,
+    tax_year: Optional[str] = Query(None, description="e.g. 'Tax Year 2026-27', 'FY 2025-26', or 'ALL'"),
+    current_user: UserPrincipal = Depends(get_current_user)
+):
+    """
+    Computes Indian Capital Gains Tax Schedule under Income-tax Act, 2025 (STCG @ 20%, LTCG @ 12.5% > ₹1.25L)
+    and identifies actionable Tax Loss Harvesting opportunities with zero ML invocations.
+    """
+    try:
+        return await compute_portfolio_tax_report(
+            user_id=current_user.uid,
+            portfolio_id=portfolio_id,
+            tax_year_label=tax_year
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc)
+        )
+
+
+@router.get("/portfolios/{portfolio_id}/tax-report/export-csv")
+async def export_portfolio_tax_report_csv(
+    portfolio_id: str,
+    tax_year: Optional[str] = Query(None, description="e.g. 'Tax Year 2026-27'"),
+    current_user: UserPrincipal = Depends(get_current_user)
+):
+    """
+    Generates and downloads an ITR Schedule-Compatible CSV audit export.
+    """
+    try:
+        rep = await compute_portfolio_tax_report(
+            user_id=current_user.uid,
+            portfolio_id=portfolio_id,
+            tax_year_label=tax_year
+        )
+        csv_content = generate_itr_schedule_csv(rep)
+        filename = f"NexFolio_ITR_Schedule_{portfolio_id}_{rep.rule_set.tax_year.replace(' ', '_')}.csv"
+        return Response(
+            content=csv_content,
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc)
+        )

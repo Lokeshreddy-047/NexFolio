@@ -24,6 +24,7 @@ from app.services.prediction_service import predict_portfolio_risk
 from app.services.explainability_service import explain_portfolio_risk
 from app.services.shap_translation_service import translate_shap_drivers
 from app.repositories.snapshot_repository import get_snapshots_by_portfolio
+from app.services.market_data.manager import market_data_manager
 
 # In-memory short-lived cache for fast repeated intelligence queries
 _intelligence_cache: Dict[str, Tuple[float, PortfolioIntelligenceResponse]] = {}
@@ -275,8 +276,10 @@ async def generate_portfolio_intelligence(
         )
         return empty_response
 
-    # 2. Holdings & Allocations
-    holdings, invested, curr_val, _, _ = compute_holdings_metrics(raw_holdings)
+    # 2. Holdings & Allocations with Live Upstox/Market Quotes
+    symbols = [h.get("symbol", "") for h in raw_holdings if h.get("symbol")]
+    live_quotes = await market_data_manager.get_batch_quotes(symbols) if symbols else {}
+    holdings, invested, curr_val, _, _ = compute_holdings_metrics(raw_holdings, quotes=live_quotes)
     _, sector_alloc = compute_allocations(holdings, curr_val)
     features = derive_institutional_features(holdings, invested, curr_val)
 
@@ -289,11 +292,16 @@ async def generate_portfolio_intelligence(
     scorecard = _compute_health_pillars(features)
     recommendations = _generate_traceable_recommendations(holdings, sector_alloc, features)
 
+    # Determine live data quality badge
+    active_prov = market_data_manager.active_provider
+    current_badge = getattr(active_prov, "default_data_badge", None)
+    badge_str = current_badge.value if current_badge else "LIVE"
+
     provenance = ModelProvenance(
         analyzed_at=datetime.now(timezone.utc),
-        data_quality_badge="REFERENCE",
+        data_quality_badge=badge_str,
         data_sufficiency_status="READY",
-        data_sufficiency_notes=f"Successfully analyzed {len(holdings)} holdings across {len(sector_alloc)} sectors."
+        data_sufficiency_notes=f"Successfully analyzed {len(holdings)} holdings across {len(sector_alloc)} sectors with {badge_str} market pedigree."
     )
 
     quant_metrics = QuantitativeMetrics(
