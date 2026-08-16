@@ -1,0 +1,30 @@
+services:
+  # ----------------------------------------------------------------------------
+  # NexFolio FastAPI AI Backend Service
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: nexfolio-ai-service
+    env: python
+    region: oregon
+    plan: free
+    rootDir: ai-service
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/v1/health/ready
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: ENVIRONMENT
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: nexfolio
+      - key: MARKET_DATA_MODE
+        value: reference
+      - key: MARKET_DATA_PROVIDER
+        value: reference
+      - key: ALLOWED_ORIGINS
+        value: "https://nexfolio.vercel.app,http://localhost:3000"
+      - key: FIREBASE_PROJECT_ID
+        sync: false
