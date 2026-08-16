@@ -43,7 +43,8 @@ app.add_middleware(
 # 3. Cross-Origin Resource Sharing (CORS)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins,
+    allow_origins=settings.allowed_origins if settings.allowed_origins != ["*"] else ["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origin_regex=r"https://.*\.vercel\.app|https://.*\.onrender\.com|http://localhost:.*|http://127.0.0.1:.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
