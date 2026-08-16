@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from app.services.prediction_service import predict_portfolio_risk
 from app.services.explainability_service import explain_portfolio_risk
 from app.repositories.prediction_repository import save_prediction
@@ -16,13 +16,13 @@ async def persist_prediction(user_id: str, portfolio_id: str, portfolio_data: di
         "confidence": prediction["confidence"],
         "probabilities": prediction["probabilities"],
         "explanation": explanation,
-        "created_at": datetime.utcnow()
+        "created_at": datetime.now(timezone.utc)
     }
 
     prediction_id = await save_prediction(document)
 
     return {
-        "prediction_id": prediction_id,
+        "prediction_id": prediction_id or "offline",
         "risk_category": prediction["risk_category"],
         "confidence": prediction["confidence"]
     }

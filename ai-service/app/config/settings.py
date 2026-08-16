@@ -7,13 +7,25 @@ class Settings(BaseSettings):
     api_prefix: str = "/api/v1"
 
     frontend_url: str = "http://localhost:3000"
+    frontend_urls: str = ""
 
-    model_path: str = "ml/models/xgboost_risk_model.pkl"
+    xgboost_model_path: str = "ml/models/xgboost_risk_model.pkl"
     shap_explainer_path: str = "ml/models/shap_explainer.pkl"
     metadata_path: str = "ml/datasets/portfolio/xgboost_ready/feature_metadata.json"
 
-    mongodb_uri: str
+    mongodb_uri: str = "mongodb://localhost:27017"
     mongodb_database: str = "nexfolio"
+
+    firebase_project_id: str = "nexfolio-pid37"
+    firebase_credentials_path: str = ""
+    firebase_credentials_json: str = ""
+    dev_auth_enabled: bool = True
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        raw_value = self.frontend_urls or self.frontend_url
+        origins = [part.strip() for part in raw_value.split(",") if part.strip()]
+        return origins or [self.frontend_url]
 
     model_config = SettingsConfigDict(
         env_file=".env",

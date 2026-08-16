@@ -4,10 +4,12 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { auth } from "@/lib/firebase";
 
 export function GoogleSignInButton() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,8 +19,8 @@ export function GoogleSignInButton() {
 
     try {
       const provider = new GoogleAuthProvider();
-
       await signInWithPopup(auth, provider);
+      router.push("/dashboard");
     } catch (err) {
       console.error(err);
       setError("Google Sign-In failed. Please try again.");
