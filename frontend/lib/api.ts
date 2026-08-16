@@ -1,7 +1,7 @@
 import { auth } from "./firebase";
 
 const API_BASE_URL =
-  (process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+  (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 
 export async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {
@@ -1120,8 +1120,7 @@ export async function getPortfolioTaxReportCSV(
 ): Promise<string> {
   const qs = taxYear ? `?tax_year=${encodeURIComponent(taxYear)}` : "";
   const token = typeof window !== "undefined" ? localStorage.getItem("nexfolio_token") : null;
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-  const res = await fetch(`${baseUrl}/api/v1/portfolios/${portfolioId}/tax-report/export-csv${qs}`, {
+  const res = await fetch(`${API_BASE_URL}/api/v1/portfolios/${portfolioId}/tax-report/export-csv${qs}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
   if (!res.ok) throw new Error("Failed to export tax CSV");
