@@ -114,7 +114,7 @@ class LiveMarketProvider(MarketDataProvider):
         is_stale, reason = check_quote_staleness(
             self._adapter.last_heartbeat,
             self._max_staleness_seconds,
-            enforce_market_hours=False
+            enforce_market_hours=True
         )
 
         if is_stale:

@@ -26,7 +26,18 @@ export function DataPedigreeBadge({
   const norm = (badge || "REFERENCE").toUpperCase();
 
   const getStyle = () => {
-    if (isStale && norm === "LIVE") {
+    const isClosedSession = session === "CLOSED" || session === "POST_CLOSE" || session === "WEEKEND" || session === "HOLIDAY";
+
+    if (isClosedSession && (norm === "LIVE" || norm === "REFERENCE")) {
+      return {
+        bg: "bg-teal-500/10 text-teal-400 border-teal-500/30",
+        dot: "bg-teal-400",
+        icon: <Clock size={size === "sm" ? 11 : 13} className="shrink-0" />,
+        label: "OFFICIAL CLOSING"
+      };
+    }
+
+    if (isStale && norm === "LIVE" && !isClosedSession) {
       return {
         bg: "bg-amber-500/10 text-amber-400 border-amber-500/30",
         dot: "bg-amber-400",

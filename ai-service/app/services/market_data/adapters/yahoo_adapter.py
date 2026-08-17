@@ -45,6 +45,7 @@ class YahooFinanceAdapter(BaseBrokerAdapter):
         self._running = False
         self._connection_state = "LIVE"
         self._is_connected = True
+        self._last_heartbeat = datetime.now(timezone.utc)
 
     @property
     def connection_state(self) -> str:
@@ -75,7 +76,8 @@ class YahooFinanceAdapter(BaseBrokerAdapter):
         """
         Dynamically derives data badge from quote timestamp and market hours:
         - LIVE: Market is open AND quote timestamp is within live freshness window.
-        - DELAYED: Market is closed or quote age exceeds freshness window.
+        - LIVE (Official Close): Market is closed; quote represents authentic exchange closing price.
+        - DELAYED: Quote age exceeds freshness window during active trading.
         - FALLBACK_REFERENCE: Quote timestamp missing or unparseable.
         """
         if quote_timestamp is None:
@@ -92,7 +94,7 @@ class YahooFinanceAdapter(BaseBrokerAdapter):
             return DataBadge.LIVE, f"Fresh market quote (Age: {int(age_seconds)}s)"
 
         if not market_open:
-            return DataBadge.DELAYED, "NSE trading session closed; displaying last closing price"
+            return DataBadge.LIVE, "NSE trading session closed; displaying official exchange closing price"
 
         return DataBadge.DELAYED, f"Delayed market quote (Age: {int(age_seconds)}s)"
 
