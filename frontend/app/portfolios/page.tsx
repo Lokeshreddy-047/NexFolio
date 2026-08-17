@@ -22,13 +22,18 @@ import {
   Trash2,
   Edit2
 } from "lucide-react";
+import { useToast } from "@/components/toast-provider";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 export default function PortfoliosPage() {
   const { user, loading: authLoading } = useAuth();
+  const toast = useToast();
   const [portfolios, setPortfolios] = useState<PortfolioSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingPortfolio, setEditingPortfolio] = useState<PortfolioSummary | null>(null);
+  const [deleteConfirmPortfolio, setDeleteConfirmPortfolio] = useState<{ id: string; name: string } | null>(null);
+  const [deletingPortfolio, setDeletingPortfolio] = useState(false);
 
   // Form states
   const [name, setName] = useState("");
@@ -60,17 +65,19 @@ export default function PortfoliosPage() {
 
     try {
       setSubmitting(true);
+      const createdName = name.trim();
       await createPortfolio({
-        name: name.trim(),
+        name: createdName,
         description: description.trim() || undefined,
         currency,
       });
       setName("");
       setDescription("");
       setIsCreateOpen(false);
+      toast.success("Portfolio Created", `Portfolio "${createdName}" was successfully initialized.`);
       await fetchPortfolios();
-    } catch (err) {
-      alert(`Error creating portfolio: ${err}`);
+    } catch (err: unknown) {
+      toast.error("Error Creating Portfolio", (err as Error).message || "Failed to create portfolio.");
     } finally {
       setSubmitting(false);
     }
@@ -82,31 +89,39 @@ export default function PortfoliosPage() {
 
     try {
       setSubmitting(true);
+      const updatedName = name.trim();
       await updatePortfolio(editingPortfolio.id, {
-        name: name.trim(),
+        name: updatedName,
         description: description.trim() || undefined,
       });
       setEditingPortfolio(null);
       setName("");
       setDescription("");
+      toast.success("Portfolio Updated", `Portfolio settings for "${updatedName}" saved.`);
       await fetchPortfolios();
-    } catch (err) {
-      alert(`Error updating portfolio: ${err}`);
+    } catch (err: unknown) {
+      toast.error("Error Updating Portfolio", (err as Error).message || "Failed to update portfolio.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id: string, portName: string) => {
-    if (!confirm(`Are you sure you want to delete "${portName}"? All child holdings and transactions will be permanently deleted.`)) {
-      return;
-    }
+  const handleDelete = (id: string, portName: string) => {
+    setDeleteConfirmPortfolio({ id, name: portName });
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmPortfolio) return;
     try {
-      await deletePortfolio(id);
+      setDeletingPortfolio(true);
+      await deletePortfolio(deleteConfirmPortfolio.id);
+      toast.success("Portfolio Deleted", `Portfolio "${deleteConfirmPortfolio.name}" and all associated holdings were removed.`);
+      setDeleteConfirmPortfolio(null);
       await fetchPortfolios();
-    } catch (err) {
-      alert(`Error deleting portfolio: ${err}`);
+    } catch (err: unknown) {
+      toast.error("Error Deleting Portfolio", (err as Error).message || "Failed to delete portfolio.");
+    } finally {
+      setDeletingPortfolio(false);
     }
   };
 
@@ -460,6 +475,19 @@ export default function PortfoliosPage() {
           </div>
         </div>
       )}
+
+      {/* Institutional Delete Portfolio Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!deleteConfirmPortfolio}
+        title="Permanently Delete Portfolio?"
+        description={`Are you sure you want to delete "${deleteConfirmPortfolio?.name}"? All associated holdings, transaction ledgers, and valuation histories will be permanently wiped.`}
+        confirmText="Delete Portfolio"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={deletingPortfolio}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteConfirmPortfolio(null)}
+      />
     </div>
   );
 }

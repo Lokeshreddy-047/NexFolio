@@ -13,6 +13,7 @@ import {
   NotificationItem
 } from "@/lib/api";
 import { useTheme } from "./theme-provider";
+import { useToast } from "./toast-provider";
 import {
   Briefcase,
   Plus,
@@ -35,12 +36,13 @@ interface HeaderProps {
 
 export function Header({
   title = "Command Center",
-  subtitle,
+  subtitle = "AI Intelligence & Portfolio Risk Cockpit",
   activePortfolioId,
   onPortfolioChange,
 }: HeaderProps) {
   const { user, signOut } = useAuth();
   const { theme, resolvedTheme, setTheme } = useTheme();
+  const toast = useToast();
   const [portfolios, setPortfolios] = useState<PortfolioSummary[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -113,7 +115,8 @@ export function Header({
 
     try {
       setIsSubmitting(true);
-      const created = await createPortfolio({ name: newPortfolioName.trim() });
+      const createdName = newPortfolioName.trim();
+      const created = await createPortfolio({ name: createdName });
       setPortfolios([created, ...portfolios]);
       if (onPortfolioChange) {
         onPortfolioChange(created.id);
@@ -121,8 +124,9 @@ export function Header({
       setNewPortfolioName("");
       setIsCreateModalOpen(false);
       setIsDropdownOpen(false);
-    } catch (err) {
-      alert(`Error creating portfolio: ${err}`);
+      toast.success("Portfolio Created", `Switched active portfolio to "${createdName}".`);
+    } catch (err: unknown) {
+      toast.error("Error Creating Portfolio", (err as Error).message || "Failed to create portfolio.");
     } finally {
       setIsSubmitting(false);
     }

@@ -25,10 +25,12 @@ import {
   X
 } from "lucide-react";
 import { DataPedigreeBadge } from "@/components/data-badge";
+import { useToast } from "@/components/toast-provider";
 
 export default function StockDetailPage({ params }: { params: Promise<{ symbol: string }> }) {
   const resolvedParams = use(params);
   const rawSymbol = decodeURIComponent(resolvedParams.symbol);
+  const toast = useToast();
 
   const [stock, setStock] = useState<StockDetailResponse | null>(null);
   const [watchlists, setWatchlists] = useState<WatchlistResponse[]>([]);
@@ -98,6 +100,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
         price: stock.current_price,
         notes: `Order executed from ${stock.base_symbol} Detail page`
       });
+      toast.success("Order Executed", `Purchased ${tradeShares} shares of ${stock.base_symbol}.`);
       setTradeSuccess(`Successfully purchased ${tradeShares} shares of ${stock.base_symbol}!`);
       setTimeout(() => {
         setShowTradeModal(false);
@@ -105,7 +108,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
       }, 1500);
       loadStockData();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Trade recording failed.");
+      toast.error("Trade Execution Error", err instanceof Error ? err.message : "Trade recording failed.");
     } finally {
       setExecutingTrade(false);
     }

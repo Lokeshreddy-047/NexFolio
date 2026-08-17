@@ -27,10 +27,12 @@ import {
   Laptop
 } from "lucide-react";
 import { DataPedigreeBadge } from "@/components/data-badge";
+import { useToast } from "@/components/toast-provider";
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
+  const toast = useToast();
 
   // Profile Form
   const [displayName, setDisplayName] = useState(user?.displayName || "");
@@ -79,10 +81,11 @@ export default function SettingsPage() {
       setSavingProfile(true);
       await updateProfile(user, { displayName });
       setProfileSuccess(true);
+      toast.success("Profile Updated", "Your display name was saved.");
       setTimeout(() => setProfileSuccess(false), 2500);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to update profile:", err);
-      alert("Failed to update profile name.");
+      toast.error("Profile Error", (err as Error).message || "Failed to update profile name.");
     } finally {
       setSavingProfile(false);
     }
@@ -98,6 +101,7 @@ export default function SettingsPage() {
       localStorage.setItem("nexfolio_price_flashes", String(priceFlashesEnabled));
     }
     setSettingsSaved(true);
+    toast.success("Preferences Saved", "Risk thresholds and telemetry options updated.");
     setTimeout(() => setSettingsSaved(false), 2500);
   };
 
@@ -545,15 +549,36 @@ export default function SettingsPage() {
                 <div className="space-y-2 pt-1">
                   <button
                     onClick={() => {
-                      alert("Exporting portfolio ledger JSON...");
+                      const ledgerExport = {
+                        user_id: user?.uid,
+                        exported_at: new Date().toISOString(),
+                        app_version: "2.4.0",
+                        risk_settings: {
+                          sectorThreshold,
+                          assetThreshold,
+                          betaThreshold,
+                          volatilityThreshold,
+                          priceFlashesEnabled
+                        }
+                      };
+                      const blob = new Blob([JSON.stringify(ledgerExport, null, 2)], { type: "application/json" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `NexFolio_User_Settings_${new Date().toISOString().slice(0, 10)}.json`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      toast.success("Profile & Settings Exported", "Downloaded JSON backup configuration.");
                     }}
                     className="w-full py-2.5 px-4 rounded-xl bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 text-xs font-semibold flex items-center justify-between transition-colors"
                   >
                     <span className="flex items-center gap-2">
                       <Download size={14} className="text-teal-400" />
-                      Export Ledger (JSON)
+                      Export Configuration (JSON)
                     </span>
-                    <span className="text-[10px] text-slate-400 uppercase">All Records</span>
+                    <span className="text-[10px] text-slate-400 uppercase">Configuration</span>
                   </button>
                 </div>
               </div>

@@ -38,8 +38,10 @@ import {
   FileSpreadsheet
 } from "lucide-react";
 import { DataPedigreeBadge } from "@/components/data-badge";
+import { useToast } from "@/components/toast-provider";
 
 export default function ReportsPage() {
+  const toast = useToast();
   const [portfolios, setPortfolios] = useState<PortfolioSummary[]>([]);
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>("");
   const [report, setReport] = useState<InvestorReportResponse | null>(null);
@@ -135,8 +137,9 @@ export default function ReportsPage() {
       setGenerating(true);
       const snap = await getReportById(reportId);
       setReport(snap);
+      toast.success("Historical Report Loaded", `Integrity Hash: ${snap.report_integrity_hash.slice(0, 10)}...`);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to load historical report.");
+      toast.error("Report Load Error", err instanceof Error ? err.message : "Failed to load historical report.");
     } finally {
       setGenerating(false);
     }
@@ -159,6 +162,7 @@ export default function ReportsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      toast.success("Tax Report Exported", "Downloaded JSON tax audit report.");
       return;
     }
 
@@ -172,6 +176,7 @@ export default function ReportsPage() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    toast.success("Executive Report Exported", "Downloaded JSON investor snapshot.");
   };
 
   // 7. Download ITR-Compatible CSV Export
@@ -188,8 +193,9 @@ export default function ReportsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      toast.success("ITR Schedule Exported", "CSV downloaded for tax filing.");
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to download tax CSV export.");
+      toast.error("Export Error", err instanceof Error ? err.message : "Failed to download tax CSV export.");
     }
   };
 

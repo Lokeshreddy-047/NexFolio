@@ -28,12 +28,17 @@ import {
 } from "lucide-react";
 import { DataPedigreeBadge } from "@/components/data-badge";
 import { useMarketFeed } from "@/lib/useMarketFeed";
+import { useToast } from "@/components/toast-provider";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 export default function HoldingsPage() {
   const { user, loading: authLoading } = useAuth();
+  const toast = useToast();
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>("");
   const [holdings, setHoldings] = useState<HoldingItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirmHolding, setDeleteConfirmHolding] = useState<{ id: string; symbol: string } | null>(null);
+  const [deletingHolding, setDeletingHolding] = useState(false);
 
   // Live SSE market tick feed
   const streamSymbols = React.useMemo(() => {
@@ -147,15 +152,17 @@ export default function HoldingsPage() {
 
       // Reset modal state
       setIsAddOpen(false);
+      const addedSym = symbol.trim().toUpperCase();
       setSymbol("");
       setCompanyName("");
       setQuantity("");
       setBuyPrice("");
       setCurrentPrice("");
 
+      toast.success("Holding Added", `${addedSym} was successfully added to your portfolio.`);
       await fetchHoldings();
-    } catch (err) {
-      alert(`Error adding holding: ${err}`);
+    } catch (err: unknown) {
+      toast.error("Error Adding Holding", (err as Error).message || "Failed to add holding.");
     } finally {
       setSubmitting(false);
     }
@@ -175,25 +182,32 @@ export default function HoldingsPage() {
         asset_type: assetType,
       });
 
+      toast.success("Holding Updated", `Updated position details for ${editingHolding.symbol}.`);
       setEditingHolding(null);
       await fetchHoldings();
-    } catch (err) {
-      alert(`Error updating holding: ${err}`);
+    } catch (err: unknown) {
+      toast.error("Error Updating Holding", (err as Error).message || "Failed to update holding.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async (holdingId: string, sym: string) => {
-    if (!confirm(`Are you sure you want to remove ${sym} from this portfolio?`)) {
-      return;
-    }
+  const handleDelete = (holdingId: string, sym: string) => {
+    setDeleteConfirmHolding({ id: holdingId, symbol: sym });
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmHolding) return;
     try {
-      await deleteHolding(holdingId);
+      setDeletingHolding(true);
+      await deleteHolding(deleteConfirmHolding.id);
+      toast.success("Holding Removed", `${deleteConfirmHolding.symbol} was removed from this portfolio.`);
+      setDeleteConfirmHolding(null);
       await fetchHoldings();
-    } catch (err) {
-      alert(`Error deleting holding: ${err}`);
+    } catch (err: unknown) {
+      toast.error("Error Removing Holding", (err as Error).message || "Failed to remove holding.");
+    } finally {
+      setDeletingHolding(false);
     }
   };
 
@@ -807,6 +821,19 @@ export default function HoldingsPage() {
           </div>
         </div>
       )}
+
+      {/* Institutional Remove Holding Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!deleteConfirmHolding}
+        title="Remove Position from Portfolio?"
+        description={`Are you sure you want to remove ${deleteConfirmHolding?.symbol} from this portfolio? This will remove all position weight, unrealized P&L, and tracking history for this asset.`}
+        confirmText="Remove Holding"
+        cancelText="Keep Asset"
+        variant="danger"
+        isLoading={deletingHolding}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteConfirmHolding(null)}
+      />
     </div>
   );
 }

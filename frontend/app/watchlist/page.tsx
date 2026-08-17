@@ -29,12 +29,17 @@ import {
 } from "lucide-react";
 import { DataPedigreeBadge } from "@/components/data-badge";
 import { useMarketFeed } from "@/lib/useMarketFeed";
+import { useToast } from "@/components/toast-provider";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 export default function WatchlistPage() {
+  const toast = useToast();
   const [watchlists, setWatchlists] = useState<WatchlistResponse[]>([]);
   const [activeWatchlistId, setActiveWatchlistId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteConfirmWatchlist, setDeleteConfirmWatchlist] = useState<{ id: string; name: string } | null>(null);
+  const [deletingWatchlist, setDeletingWatchlist] = useState(false);
 
   // Active Watchlist for live tick stream
   const activeWatchlist = watchlists.find(w => w.id === activeWatchlistId) || (watchlists.length > 0 ? watchlists[0] : null);
@@ -116,13 +121,15 @@ export default function WatchlistPage() {
     if (!newWatchlistName.trim()) return;
     try {
       setCreating(true);
-      const created = await createWatchlist(newWatchlistName);
+      const name = newWatchlistName.trim();
+      const created = await createWatchlist(name);
       setWatchlists(prev => [...prev, created]);
       setActiveWatchlistId(created.id);
       setNewWatchlistName("");
       setShowCreateModal(false);
+      toast.success("Watchlist Created", `Watchlist "${name}" is now ready.`);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to create watchlist.");
+      toast.error("Error Creating Watchlist", (err as Error).message || "Failed to create watchlist.");
     } finally {
       setCreating(false);
     }
@@ -132,27 +139,42 @@ export default function WatchlistPage() {
   const handleToggleStock = async (symbol: string) => {
     if (!activeWatchlistId) return;
     try {
+      const isRemoving = activeWatchlist?.symbols.includes(symbol) || activeWatchlist?.symbols.includes(symbol.replace(/\.NS$/, ""));
       const updated = await toggleWatchlistSymbol(activeWatchlistId, symbol);
       setWatchlists(prev => prev.map(w => w.id === updated.id ? updated : w));
+      if (isRemoving) {
+        toast.info("Removed from Watchlist", `${symbol} was removed from ${activeWatchlist?.name || "your list"}.`);
+      } else {
+        toast.success("Added to Watchlist", `${symbol} added to ${activeWatchlist?.name || "your list"}.`);
+      }
     } catch (err: unknown) {
-      console.error(err);
+      toast.error("Watchlist Error", (err as Error).message || "Failed to update watchlist symbol.");
     }
   };
 
   // 5. Delete Watchlist
-  const handleDeleteWatchlist = async (id: string) => {
+  const handleDeleteWatchlist = (id: string, name: string) => {
     if (watchlists.length <= 1) {
-      alert("Cannot delete the only watchlist.");
+      toast.warning("Action Not Permitted", "Cannot delete your only remaining watchlist.");
       return;
     }
-    if (!confirm("Are you sure you want to delete this watchlist?")) return;
+    setDeleteConfirmWatchlist({ id, name });
+  };
+
+  const handleConfirmDeleteWatchlist = async () => {
+    if (!deleteConfirmWatchlist) return;
     try {
-      await deleteWatchlist(id);
-      const remaining = watchlists.filter(w => w.id !== id);
+      setDeletingWatchlist(true);
+      await deleteWatchlist(deleteConfirmWatchlist.id);
+      const remaining = watchlists.filter(w => w.id !== deleteConfirmWatchlist.id);
       setWatchlists(remaining);
       setActiveWatchlistId(remaining[0]?.id || "");
+      toast.success("Watchlist Deleted", `Watchlist "${deleteConfirmWatchlist.name}" was removed.`);
+      setDeleteConfirmWatchlist(null);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to delete watchlist.");
+      toast.error("Error Deleting Watchlist", (err as Error).message || "Failed to delete watchlist.");
+    } finally {
+      setDeletingWatchlist(false);
     }
   };
 
@@ -169,6 +191,7 @@ export default function WatchlistPage() {
         price: tradeStock.current_price,
         notes: "Quick order executed from Watchlist Hub"
       });
+      toast.success("Order Executed", `Recorded BUY of ${tradeShares} shares of ${tradeStock.base_symbol}.`);
       setTradeSuccess(`Successfully recorded BUY of ${tradeShares} shares of ${tradeStock.base_symbol}!`);
       setTimeout(() => {
         setTradeStock(null);
@@ -176,7 +199,7 @@ export default function WatchlistPage() {
       }, 1500);
       loadWatchlists();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Trade execution failed.");
+      toast.error("Trade Execution Error", (err as Error).message || "Trade execution failed.");
     } finally {
       setExecutingTrade(false);
     }
@@ -288,12 +311,23 @@ export default function WatchlistPage() {
             <div className="space-y-6">
               {/* Stats Summary Bar */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-5 rounded-3xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md">
-                <div>
-                  <p className="text-[11px] uppercase font-bold text-slate-400">Watchlist & Pedigree</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <p className="text-lg font-black text-white">{activeWatchlist.name}</p>
-                    <DataPedigreeBadge badge={activeBadge || "REFERENCE"} size="sm" />
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-[11px] uppercase font-bold text-slate-400">Watchlist & Pedigree</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-lg font-black text-white">{activeWatchlist.name}</p>
+                      <DataPedigreeBadge badge={activeBadge || "REFERENCE"} size="sm" />
+                    </div>
                   </div>
+                  {watchlists.length > 1 && (
+                    <button
+                      onClick={() => handleDeleteWatchlist(activeWatchlist.id, activeWatchlist.name)}
+                      className="p-1.5 rounded-xl bg-slate-950/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-800 transition-colors"
+                      title="Delete this watchlist"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
                 </div>
 
                 <div>
@@ -322,7 +356,7 @@ export default function WatchlistPage() {
                 <div className="flex items-center justify-end">
                   {watchlists.length > 1 && (
                     <button
-                      onClick={() => handleDeleteWatchlist(activeWatchlist.id)}
+                      onClick={() => handleDeleteWatchlist(activeWatchlist.id, activeWatchlist.name)}
                       className="px-3.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-bold border border-rose-500/20 transition-all flex items-center gap-1.5"
                     >
                       <Trash2 size={13} />
@@ -567,6 +601,19 @@ export default function WatchlistPage() {
           )}
         </main>
       </div>
+
+      {/* Institutional Delete Watchlist Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!deleteConfirmWatchlist}
+        title="Delete Watchlist?"
+        description={`Are you sure you want to delete "${deleteConfirmWatchlist?.name}"? All pinned ticker tracking in this list will be removed.`}
+        confirmText="Delete Watchlist"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={deletingWatchlist}
+        onConfirm={handleConfirmDeleteWatchlist}
+        onCancel={() => setDeleteConfirmWatchlist(null)}
+      />
     </div>
   );
 }

@@ -23,12 +23,17 @@ import {
   TrendingDown,
   Layers
 } from "lucide-react";
+import { useToast } from "@/components/toast-provider";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 export default function TransactionsPage() {
   const { user, loading: authLoading } = useAuth();
+  const toast = useToast();
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>("");
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirmTx, setDeleteConfirmTx] = useState<string | null>(null);
+  const [deletingTx, setDeletingTx] = useState(false);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -135,30 +140,39 @@ export default function TransactionsPage() {
 
       // Reset modal state
       setIsRecordOpen(false);
+      const recordedSym = symbol.trim().toUpperCase();
+      const recordedType = txType;
       setSymbol("");
       setCompanyName("");
       setQuantity("");
       setPrice("");
       setNotes("");
 
+      toast.success("Transaction Recorded", `${recordedType} order for ${recordedSym} was successfully logged.`);
       await fetchTransactions();
-    } catch (err) {
-      alert(`Error recording transaction: ${err}`);
+    } catch (err: unknown) {
+      toast.error("Error Recording Transaction", (err as Error).message || "Failed to record transaction.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDeleteTx = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this transaction record?")) {
-      return;
-    }
+  const handleDeleteTx = (id: string) => {
+    setDeleteConfirmTx(id);
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmTx) return;
     try {
-      await deleteTransaction(id);
+      setDeletingTx(true);
+      await deleteTransaction(deleteConfirmTx);
+      toast.success("Transaction Deleted", "Transaction record removed from ledger.");
+      setDeleteConfirmTx(null);
       await fetchTransactions();
-    } catch (err) {
-      alert(`Error deleting transaction: ${err}`);
+    } catch (err: unknown) {
+      toast.error("Error Deleting Transaction", (err as Error).message || "Failed to delete transaction.");
+    } finally {
+      setDeletingTx(false);
     }
   };
 
@@ -604,6 +618,19 @@ export default function TransactionsPage() {
           </div>
         </div>
       )}
+
+      {/* Institutional Delete Transaction Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!deleteConfirmTx}
+        title="Delete Transaction Record?"
+        description="Are you sure you want to permanently delete this transaction entry from your portfolio ledger? This will recalculate historical trade volumes and realized P&L."
+        confirmText="Delete Record"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={deletingTx}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteConfirmTx(null)}
+      />
     </div>
   );
 }

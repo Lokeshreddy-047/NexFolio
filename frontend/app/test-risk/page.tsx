@@ -2,33 +2,25 @@
 
 import { useState } from "react";
 import { apiRequest } from "@/lib/api";
-
+import { useToast } from "@/components/toast-provider";
 
 interface RiskContributor {
   feature: string;
   impact: number;
 }
 
-
-
 interface RiskResult {
   risk_category: string;
   confidence: number;
-
   probabilities?: Record<string, number>;
-
   top_positive_contributors?: RiskContributor[];
-
   top_negative_contributors?: RiskContributor[];
 }
 
-
-
 export default function TestRiskPage() {
-
+  const toast = useToast();
   const [result, setResult] =
     useState<RiskResult | null>(null);
-
 
   const [loading, setLoading] =
     useState(false);
@@ -74,15 +66,13 @@ export default function TestRiskPage() {
 
 
       setResult(response);
-
+      toast.success("Risk Analysis Complete", `Classified as ${response.risk_category} (${(response.confidence * 100).toFixed(1)}% confidence)`);
 
     } catch(error) {
 
       console.error(error);
 
-      alert(
-        "Risk analysis failed. Check FastAPI terminal."
-      );
+      toast.error("Analysis Failed", "Risk analysis failed. Verify backend services are running.");
 
 
     } finally {
