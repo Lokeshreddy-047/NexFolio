@@ -8,7 +8,7 @@ This document is the comprehensive QA and team verification manual for **NexFoli
 
 | Component | Target URL | Status Probe |
 | :--- | :--- | :--- |
-| **Frontend Web App (Vercel)** | [https://nexfolio.vercel.app](https://nexfolio.vercel.app) *(or your deployed Vercel URL)* | Status `200 OK` |
+| **Frontend Web App (Vercel)** | [https://nexfolio-eta.vercel.app/](https://nexfolio.vercel.app) *(or your deployed Vercel URL)* | Status `200 OK` |
 | **AI Backend Service (Render)** | [https://nexfolio-ai-service.onrender.com](https://nexfolio-ai-service.onrender.com) *(or your Render URL)* | [`/api/v1/health/ready`](https://nexfolio-ai-service.onrender.com/api/v1/health/ready) |
 | **Database (MongoDB Atlas)** | `Cluster0` (M0 Shared Cloud Cluster) | Connected |
 | **Authentication (Firebase)** | Project ID: `nexfolio-pid37` | Multi-Tenant Active |

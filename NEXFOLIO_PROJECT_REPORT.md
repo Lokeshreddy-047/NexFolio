@@ -2,7 +2,7 @@
 
 **Project Title**: NexFolio — An Explainable AI (XAI) Framework for Intelligent Portfolio Risk Profiling, Real-Time Analytics, and Institutional Tax Optimization  
 **Repository**: [https://github.com/Lokeshreddy-047/NexFolio.git](https://github.com/Lokeshreddy-047/NexFolio.git)  
-**Live Production URL**: [https://nexfolio.vercel.app](https://nexfolio.vercel.app)  
+**Live Production URL**: [https://nexfolio-eta.vercel.app](https://nexfolio.vercel.app)  
 **Backend AI API**: [https://nexfolio-ai-service.onrender.com](https://nexfolio-ai-service.onrender.com)  
 **Academic & Industry Domain**: Quantitative Finance, Explainable Machine Learning (XAI), Real-Time Distributed Systems, Indian Statutory Tax Accounting  
 

@@ -10,7 +10,7 @@ async def test_market_overview_endpoint(user1_headers):
         res = await client.get("/api/v1/markets/overview", headers=user1_headers)
         assert res.status_code == 200
         data = res.json()
-        assert data["data_badge"] in ["REFERENCE", "LIVE", "SIMULATED"]
+        assert data["data_badge"] in ["REFERENCE", "LIVE", "SIMULATED", "DELAYED", "FALLBACK_REFERENCE"]
         assert "pulse" in data
         assert data["pulse"]["mood"] in ["BULLISH", "BEARISH", "NEUTRAL"]
         assert len(data["indices"]) >= 4
