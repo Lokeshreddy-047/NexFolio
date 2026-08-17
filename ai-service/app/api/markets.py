@@ -2,7 +2,7 @@ from typing import Optional, List, Dict
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 
 from app.schemas.user import UserPrincipal
-from app.dependencies.auth import get_current_user
+from app.dependencies.auth import get_optional_user
 from app.schemas.market import (
     MarketOverviewResponse,
     MarketScreenerResponse,
@@ -20,10 +20,14 @@ from app.services.market_service import (
 router = APIRouter(prefix="/markets", tags=["Markets & Screener"])
 
 
-async def _get_user_context(user_id: str) -> tuple[Dict[str, float], List[str], Optional[dict], list]:
+async def _get_user_context(user_id: Optional[str]) -> tuple[Dict[str, float], List[str], Optional[dict], list]:
     """
     Helper to extract user holdings weights and active watchlist symbols.
+    Returns empty structures safely when user_id is None (public visitor).
     """
+    if not user_id:
+        return {}, [], None, []
+
     portfolios = await get_portfolios_by_user(user_id)
     active_port = portfolios[0] if portfolios else None
 
@@ -50,13 +54,14 @@ async def _get_user_context(user_id: str) -> tuple[Dict[str, float], List[str], 
 
 @router.get("/overview", response_model=MarketOverviewResponse)
 async def get_market_pulse_and_overview(
-    current_user: UserPrincipal = Depends(get_current_user)
+    current_user: Optional[UserPrincipal] = Depends(get_optional_user)
 ):
     """
     Returns authentic market benchmarks, market pulse mood, top gainers/losers,
-    and sector performance breakdown.
+    and sector performance breakdown. Accessible publicly and enriched for authenticated users.
     """
-    holdings_map, watchlist_syms, _, _ = await _get_user_context(current_user.uid)
+    uid = current_user.uid if current_user else None
+    holdings_map, watchlist_syms, _, _ = await _get_user_context(uid)
     return await get_market_overview(
         user_holdings_symbols=holdings_map,
         user_watchlist_symbols=watchlist_syms
@@ -72,13 +77,14 @@ async def get_market_screener_stocks(
     sort_order: str = Query("desc", description="asc or desc"),
     limit: int = Query(50, ge=1, le=300),
     offset: int = Query(0, ge=0),
-    current_user: UserPrincipal = Depends(get_current_user)
+    current_user: Optional[UserPrincipal] = Depends(get_optional_user)
 ):
     """
     Screener endpoint across the 289+ NSE stock catalog with live filtering,
-    presets, and portfolio awareness.
+    presets, and portfolio awareness. Accessible publicly.
     """
-    holdings_map, watchlist_syms, _, _ = await _get_user_context(current_user.uid)
+    uid = current_user.uid if current_user else None
+    holdings_map, watchlist_syms, _, _ = await _get_user_context(uid)
     return await query_market_screener(
         query=query,
         sector=sector,
@@ -96,27 +102,29 @@ async def get_market_screener_stocks(
 async def get_stock_deep_detail(
     symbol: str,
     portfolio_id: Optional[str] = Query(None, description="Optional active portfolio context"),
-    current_user: UserPrincipal = Depends(get_current_user)
+    current_user: Optional[UserPrincipal] = Depends(get_optional_user)
 ):
     """
     Comprehensive stock detail page data with OHLCV price history, SMA overlays,
-    52W range metrics, and active portfolio presence.
+    52W range metrics, and active portfolio presence. Accessible publicly.
     """
-    portfolios = await get_portfolios_by_user(current_user.uid)
-    active_port = None
-    if portfolio_id:
-        active_port = next((p for p in portfolios if str(p["_id"]) == portfolio_id), None)
-    if not active_port and portfolios:
-        active_port = portfolios[0]
-
     user_holdings = []
-    if active_port:
-        user_holdings = await get_holdings_by_portfolio(str(active_port["_id"]), current_user.uid)
-
-    watchlists = await get_watchlists_by_user(current_user.uid)
     all_watched = []
-    for w in watchlists:
-        all_watched.extend(w.get("symbols", []))
+
+    if current_user:
+        portfolios = await get_portfolios_by_user(current_user.uid)
+        active_port = None
+        if portfolio_id:
+            active_port = next((p for p in portfolios if str(p["_id"]) == portfolio_id), None)
+        if not active_port and portfolios:
+            active_port = portfolios[0]
+
+        if active_port:
+            user_holdings = await get_holdings_by_portfolio(str(active_port["_id"]), current_user.uid)
+
+        watchlists = await get_watchlists_by_user(current_user.uid)
+        for w in watchlists:
+            all_watched.extend(w.get("symbols", []))
 
     detail = await get_stock_detail(
         symbol=symbol,

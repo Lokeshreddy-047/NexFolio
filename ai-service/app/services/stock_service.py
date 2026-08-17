@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 SECTOR_MAPPING_PATH = BASE_DIR / "ml" / "preprocessing" / "sector_mapping.json"
+MARKET_PARQUET_PATH = BASE_DIR / "ml" / "datasets" / "features" / "market_features.parquet"
 
 _stocks_cache: Optional[List[Dict]] = None
 _symbol_lookup: Optional[Dict[str, Dict]] = None
@@ -59,11 +60,35 @@ def _clean_symbol(sym: str) -> str:
     return sym
 
 
+def _load_reference_prices_from_parquet() -> Dict[str, float]:
+    """
+    Extracts the latest verified reference closing prices from market_features.parquet.
+    """
+    prices: Dict[str, float] = {}
+    if MARKET_PARQUET_PATH.exists():
+        try:
+            import pandas as pd
+            df = pd.read_parquet(MARKET_PARQUET_PATH, columns=["ticker", "close", "date"])
+            if not pd.api.types.is_datetime64_any_dtype(df["date"]):
+                df["date"] = pd.to_datetime(df["date"])
+            latest_idx = df.groupby("ticker")["date"].idxmax()
+            latest_df = df.loc[latest_idx]
+            for _, row in latest_df.iterrows():
+                ticker_sym = str(row["ticker"]).upper()
+                close_val = round(float(row["close"]), 2)
+                prices[ticker_sym] = close_val
+                prices[ticker_sym.replace(".NS", "")] = close_val
+        except Exception as exc:
+            pass
+    return prices
+
+
 def _load_stocks() -> List[Dict]:
     global _stocks_cache, _symbol_lookup
     if _stocks_cache is not None:
         return _stocks_cache
 
+    ref_prices = _load_reference_prices_from_parquet()
     stocks = []
     lookup = {}
 
@@ -74,13 +99,18 @@ def _load_stocks() -> List[Dict]:
         for symbol, sector in mapping.items():
             base_symbol = symbol.replace(".NS", "")
             company_name = POPULAR_NAMES.get(symbol, f"{base_symbol} Corporation")
+            # Lookup price from parquet, falling back to canonical index
+            ref_p = ref_prices.get(symbol.upper(), ref_prices.get(base_symbol.upper(), 0.0))
+            if ref_p <= 0.0:
+                ref_p = 100.0  # safe baseline if completely absent from dataset
+
             item = {
                 "symbol": symbol,
                 "base_symbol": base_symbol,
                 "company_name": company_name,
                 "sector": sector,
                 "asset_type": "Equity",
-                "reference_price": 1000.0,
+                "reference_price": ref_p,
             }
             stocks.append(item)
             lookup[symbol.upper()] = item
@@ -93,17 +123,19 @@ def _load_stocks() -> List[Dict]:
             ("INFY.NS", "Infosys Ltd", "Information Technology"),
             ("HDFCBANK.NS", "HDFC Bank Ltd", "Financial Services"),
         ]:
+            base_symbol = symbol.replace(".NS", "")
+            ref_p = ref_prices.get(symbol.upper(), ref_prices.get(base_symbol.upper(), 100.0))
             item = {
                 "symbol": symbol,
-                "base_symbol": symbol.replace(".NS", ""),
+                "base_symbol": base_symbol,
                 "company_name": name,
                 "sector": sector,
                 "asset_type": "Equity",
-                "reference_price": 1500.0,
+                "reference_price": ref_p,
             }
             stocks.append(item)
             lookup[symbol.upper()] = item
-            lookup[symbol.replace(".NS", "").upper()] = item
+            lookup[base_symbol.upper()] = item
 
     _stocks_cache = stocks
     _symbol_lookup = lookup
@@ -142,11 +174,14 @@ def get_stock_info(symbol: str) -> Dict:
     if base in _symbol_lookup:
         return _symbol_lookup[base]
 
+    ref_prices = _load_reference_prices_from_parquet()
+    ref_p = ref_prices.get(clean, ref_prices.get(base, 100.0))
+
     return {
         "symbol": clean,
         "base_symbol": base,
         "company_name": f"{base} Asset",
         "sector": "Other",
         "asset_type": "Equity",
-        "reference_price": 500.0,
+        "reference_price": ref_p,
     }

@@ -51,13 +51,24 @@ class YahooFinanceAdapter(BaseBrokerAdapter):
         return self._connection_state
 
     async def _get_client(self) -> httpx.AsyncClient:
-        if self._client is None or self._client.is_closed:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if self._client is None or self._client.is_closed or getattr(self, "_client_loop", None) != loop:
+            if self._client and not self._client.is_closed:
+                try:
+                    await self._client.aclose()
+                except Exception:
+                    pass
             limits = httpx.Limits(max_keepalive_connections=20, max_connections=30)
             self._client = httpx.AsyncClient(
                 timeout=self._timeout,
                 limits=limits,
                 headers={"User-Agent": YAHOO_USER_AGENT, "Accept": "application/json"}
             )
+            self._client_loop = loop
         return self._client
 
     def _determine_pedigree(self, quote_timestamp: Optional[datetime]) -> Tuple[DataBadge, str]:

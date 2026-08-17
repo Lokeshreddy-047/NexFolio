@@ -80,7 +80,7 @@ class ReferenceMarketProvider(MarketDataProvider):
                     name = cat.get("company_name", POPULAR_NAMES.get(sym, f"{base_sym} Ltd"))
                     sector = cat.get("sector", str(row.get("sector", "Diversified")))
 
-                    curr_p = round(float(row.get("close", 1000.0)), 2)
+                    curr_p = round(float(row.get("close", cat.get("reference_price", 100.0))), 2)
                     daily_ret = float(row.get("daily_return", 0.0))
                     day_chg_pct = round(daily_ret * 100.0, 2)
                     day_chg = round(curr_p * (daily_ret / (1.0 + daily_ret) if (1.0 + daily_ret) != 0 else 0.0), 2)
@@ -119,7 +119,7 @@ class ReferenceMarketProvider(MarketDataProvider):
         fallback_map = {}
         for s in stock_catalog:
             sym = s["symbol"]
-            curr_p = float(s.get("reference_price", 1500.0))
+            curr_p = float(s.get("reference_price", 100.0))
             fallback_map[sym] = {
                 "symbol": sym,
                 "base_symbol": s["base_symbol"],
