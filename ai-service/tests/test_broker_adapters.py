@@ -63,3 +63,92 @@ async def test_live_broker_adapter_normalization():
 
     await adapter.disconnect()
     assert adapter.is_connected is False
+
+
+@pytest.mark.asyncio
+async def test_yahoo_adapter_symbol_normalization_and_structure():
+    from app.services.market_data.adapters.yahoo_adapter import YahooFinanceAdapter
+    from app.services.market_data.symbol_normalizer import SymbolNormalizer
+
+    adapter = YahooFinanceAdapter(timeout_seconds=8.0)
+    assert adapter.adapter_name == "yahoo_finance"
+
+    # Test symbol normalization
+    assert SymbolNormalizer.to_canonical("RELIANCE") == "RELIANCE.NS"
+    assert SymbolNormalizer.to_canonical("TCS") == "TCS.NS"
+    assert SymbolNormalizer.to_canonical("NIFTY50") == "^NSEI"
+    assert SymbolNormalizer.to_canonical("NIFTYBANK") == "^NSEBANK"
+    assert SymbolNormalizer.to_canonical("SENSEX") == "^BSESN"
+
+    # Fetch live/closing quote for test symbol
+    quote = await adapter.fetch_single_quote("RELIANCE")
+    if quote:  # When external network is reachable
+        assert quote["symbol"] == "RELIANCE.NS"
+        assert quote["price"] > 0
+        assert "previous_close" in quote
+        assert "change" in quote
+        assert "change_pct" in quote
+        assert "volume" in quote
+        assert "timestamp" in quote
+        assert quote["data_source"] == "yahoo_finance"
+        assert quote["data_status"] in ["LIVE", "DELAYED", "FALLBACK_REFERENCE"]
+
+
+@pytest.mark.asyncio
+async def test_yahoo_adapter_pedigree_determination():
+    from datetime import datetime, timezone, timedelta
+    from app.services.market_data.adapters.yahoo_adapter import YahooFinanceAdapter
+
+    adapter = YahooFinanceAdapter()
+
+    # 1. Missing timestamp -> FALLBACK_REFERENCE
+    badge, note = adapter._determine_pedigree(None)
+    assert badge == DataBadge.FALLBACK_REFERENCE
+
+    # 2. Past timestamp (e.g. 5 hours ago) -> DELAYED
+    old_ts = datetime.now(timezone.utc) - timedelta(hours=5)
+    badge, note = adapter._determine_pedigree(old_ts)
+    assert badge == DataBadge.DELAYED
+
+    # 3. Dynamic evaluation for recent timestamp
+    recent_ts = datetime.now(timezone.utc) - timedelta(seconds=10)
+    badge, note = adapter._determine_pedigree(recent_ts)
+    assert badge in [DataBadge.LIVE, DataBadge.DELAYED]
+
+
+@pytest.mark.asyncio
+async def test_yahoo_adapter_batch_snapshot_and_caching():
+    from datetime import datetime, timezone
+    from app.services.market_data.adapters.yahoo_adapter import YahooFinanceAdapter
+
+    adapter = YahooFinanceAdapter()
+    await adapter.connect()
+    assert adapter.is_connected is True
+
+    # Pre-populate simulated cached entry to test cache hit without network
+    now = datetime.now(timezone.utc)
+    adapter._quotes_cache["TCS.NS"] = {
+        "symbol": "TCS.NS",
+        "price": 3850.0,
+        "previous_close": 3800.0,
+        "change": 50.0,
+        "change_pct": 1.32,
+        "day_change": 50.0,
+        "day_change_pct": 1.32,
+        "volume": 250000,
+        "timestamp": now.isoformat(),
+        "updated_at": now,
+        "data_source": "yahoo_finance",
+        "data_status": "DELAYED"
+    }
+
+    snapshot = await adapter.fetch_snapshot(["TCS", "TCS.NS"])
+    assert "TCS.NS" in snapshot
+    assert snapshot["TCS.NS"]["price"] == 3850.0
+
+    health = await adapter.health_check()
+    assert health["status"] == "HEALTHY"
+    assert health["cached_symbols_count"] >= 1
+
+    await adapter.disconnect()
+    assert adapter.is_connected is False

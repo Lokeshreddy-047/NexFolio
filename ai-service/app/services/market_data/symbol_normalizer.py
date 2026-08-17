@@ -18,8 +18,12 @@ class SymbolNormalizer:
         "SENSEX": "^BSESN",
         "BSE:SENSEX": "^BSESN",
         "BANKNIFTY": "^NSEBANK",
+        "NIFTYBANK": "^NSEBANK",
         "NIFTY BANK": "^NSEBANK",
+        "BANK NIFTY": "^NSEBANK",
         "NSE:BANKNIFTY": "^NSEBANK",
+        "NSE:NIFTYBANK": "^NSEBANK",
+        "NSE:BANK NIFTY": "^NSEBANK",
         "NIFTY IT": "^CNXIT",
         "CNXIT": "^CNXIT"
     }

@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     dev_auth_enabled: bool = True
 
     # Market Data Feed Layer
-    market_data_mode: str = "reference"
-    market_data_provider: str = "reference"
+    market_data_mode: str = "live"
+    market_data_provider: str = "yahoo"
     upstox_client_id: str = ""
     upstox_client_secret: str = ""
     upstox_access_token: str = ""

@@ -76,3 +76,72 @@ async def test_full_market_data_degradation_chain():
         # Step 7: Verify zero ML engine calls occurred throughout all feed state transitions!
         assert mock_ml_predict.call_count == 0
         assert mock_ml_explain.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_yahoo_market_data_degradation_and_zero_ml_chain():
+    """
+    Specifically tests the 4-stage degradation cycle for YahooFinanceAdapter:
+    1. Healthy response -> LIVE / DELAYED
+    2. Stale timestamp (>60s) -> DELAYED
+    3. Adapter Disconnection / Failure -> FALLBACK_REFERENCE
+    4. Adapter Recovery -> LIVE / DELAYED
+    And verifies ZERO ML inference calls occur across all steps.
+    """
+    from app.services.market_data.adapters.yahoo_adapter import YahooFinanceAdapter
+
+    with patch("app.services.prediction_service.predict_portfolio_risk") as mock_ml_predict, \
+         patch("app.services.explainability_service.explain_portfolio_risk") as mock_ml_explain:
+
+        ref_provider = ReferenceMarketProvider()
+        yahoo_adapter = YahooFinanceAdapter(live_freshness_window_seconds=60.0)
+        await yahoo_adapter.connect()
+        assert yahoo_adapter.is_connected is True
+
+        live_provider = LiveMarketProvider(
+            adapter=yahoo_adapter,
+            reference_fallback=ref_provider,
+            max_staleness_seconds=60.0
+        )
+
+        # 1. Healthy response with fresh quote
+        now = datetime.now(timezone.utc)
+        yahoo_adapter._quotes_cache["RELIANCE.NS"] = {
+            "symbol": "RELIANCE.NS",
+            "price": 1320.0,
+            "previous_close": 1310.0,
+            "change": 10.0,
+            "change_pct": 0.76,
+            "day_change": 10.0,
+            "day_change_pct": 0.76,
+            "volume": 5000000,
+            "timestamp": now.isoformat(),
+            "updated_at": now,
+            "data_source": "yahoo_finance",
+            "data_status": "LIVE"
+        }
+        overview_healthy = await live_provider.get_market_overview()
+        assert overview_healthy.data_badge in [DataBadge.LIVE.value, DataBadge.DELAYED.value]
+
+        # 2. Quote becomes stale (age > 60s)
+        yahoo_adapter._last_heartbeat = now - timedelta(seconds=120)
+        overview_stale = await live_provider.get_market_overview()
+        assert overview_stale.data_badge == DataBadge.DELAYED.value
+        assert overview_stale.is_stale is True
+
+        # 3. Network Disconnect / Failure -> FALLBACK_REFERENCE
+        await yahoo_adapter.disconnect()
+        assert yahoo_adapter.is_connected is False
+        overview_fallback = await live_provider.get_market_overview()
+        assert overview_fallback.data_badge == DataBadge.FALLBACK_REFERENCE.value
+        assert overview_fallback.fallback_reason is not None
+
+        # 4. Adapter Recovery -> LIVE/DELAYED
+        await yahoo_adapter.connect()
+        yahoo_adapter._last_heartbeat = datetime.now(timezone.utc)
+        overview_recovered = await live_provider.get_market_overview()
+        assert overview_recovered.data_badge in [DataBadge.LIVE.value, DataBadge.DELAYED.value]
+
+        # 5. Verify Zero ML Invocations
+        assert mock_ml_predict.call_count == 0
+        assert mock_ml_explain.call_count == 0

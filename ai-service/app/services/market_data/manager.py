@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 VALID_CONFIG_PAIRS = {
     ("reference", "reference"),
     ("simulated", "simulated"),
+    ("live", "yahoo"),
     ("live", "upstox"),
     ("live", "angel_one"),
     ("live", "zerodha"),
@@ -40,25 +41,30 @@ class MarketDataManager:
 
         # Normalize and validate configuration pairs
         if mode_env is None and provider_env is None:
-            mode = "reference"
-            provider = "reference"
+            mode = "live"
+            provider = "yahoo"
         elif mode_env is None and provider_env is not None:
             provider = provider_env.lower().strip()
             if provider in ("simulated", "simulated_live"):
                 mode = "simulated"
                 provider = "simulated"
+            elif provider in ("yahoo", "yfinance", "public"):
+                mode = "live"
+                provider = "yahoo"
             elif provider in ("upstox", "angel_one", "zerodha", "live", "live_vendor", "nse_authorized_feed"):
                 mode = "live"
-                provider = "upstox" if provider in ("live", "live_vendor") else provider
+                provider = "yahoo" if provider in ("live", "live_vendor") else provider
             else:
                 mode = "reference"
                 provider = "reference"
         elif mode_env is not None and provider_env is None:
             mode = mode_env.lower().strip()
-            provider = "upstox" if mode == "live" else mode
+            provider = "yahoo" if mode == "live" else mode
         else:
             mode = mode_env.lower().strip()
             provider = provider_env.lower().strip()
+            if provider in ("yfinance", "public"):
+                provider = "yahoo"
 
         if (mode, provider) not in VALID_CONFIG_PAIRS:
             raise ValueError(
@@ -81,7 +87,10 @@ class MarketDataManager:
             )
         elif mode == "live":
             try:
-                if provider == "upstox":
+                if provider == "yahoo":
+                    from app.services.market_data.adapters.yahoo_adapter import YahooFinanceAdapter
+                    adapter = YahooFinanceAdapter()
+                elif provider == "upstox":
                     from app.services.market_data.adapters.upstox_adapter import UpstoxBrokerAdapter
                     adapter = UpstoxBrokerAdapter()
                 elif provider == "angel_one":

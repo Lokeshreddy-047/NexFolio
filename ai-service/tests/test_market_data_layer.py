@@ -90,7 +90,7 @@ async def test_live_market_provider_and_fallback():
 async def test_market_data_manager_orchestration():
     manager = MarketDataManager()
     overview1 = await manager.get_market_overview()
-    assert overview1.data_badge in ("REFERENCE", "LIVE")
+    assert overview1.data_badge in ("REFERENCE", "LIVE", "DELAYED", "FALLBACK_REFERENCE")
 
     # Second call should hit cache
     overview2 = await manager.get_market_overview()
@@ -123,6 +123,11 @@ def test_paired_configuration_validation():
     with patch.dict(os.environ, {"MARKET_DATA_MODE": "simulated", "MARKET_DATA_PROVIDER": "simulated"}):
         mgr2 = MarketDataManager()
         assert mgr2._mode == "simulated"
+
+    with patch.dict(os.environ, {"MARKET_DATA_MODE": "live", "MARKET_DATA_PROVIDER": "yahoo"}):
+        mgr_yahoo = MarketDataManager()
+        assert mgr_yahoo._mode == "live"
+        assert mgr_yahoo._provider_name == "yahoo"
 
     with patch.dict(os.environ, {"MARKET_DATA_MODE": "live", "MARKET_DATA_PROVIDER": "upstox"}):
         mgr3 = MarketDataManager()
