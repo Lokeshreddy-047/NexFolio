@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "./auth-provider";
 import { useTheme } from "./theme-provider";
 import {
   LayoutDashboard,
@@ -17,7 +16,6 @@ import {
   Newspaper,
   FileText,
   Settings,
-  LogOut,
   ChevronLeft,
   ChevronRight,
   Menu,
@@ -49,7 +47,6 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, signOut } = useAuth();
   const { theme, resolvedTheme, toggleTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -151,11 +148,11 @@ export function Sidebar() {
           })}
         </div>
 
-        {/* Mobile Theme & User Profile Section */}
-        <div className="p-3 border-t border-slate-800/80 bg-slate-950/60 space-y-2">
+        {/* Mobile Theme Toggle Section */}
+        <div className="p-3 border-t border-slate-800/80 bg-slate-950/60">
           <button
             onClick={toggleTheme}
-            className="w-full flex items-center justify-between p-2 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/70 text-xs text-slate-300 transition-colors"
+            className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/70 text-xs text-slate-300 transition-colors"
           >
             <div className="flex items-center gap-2">
               {resolvedTheme === "light" ? (
@@ -169,38 +166,6 @@ export function Sidebar() {
               {theme}
             </span>
           </button>
-
-          {user && (
-            <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-900/60 border border-slate-800/70">
-              {user.photoURL ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user.photoURL}
-                  alt={user.displayName || "User"}
-                  className="w-9 h-9 rounded-full object-cover ring-2 ring-emerald-500/30 shrink-0"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-slate-800 text-emerald-400 font-bold flex items-center justify-center ring-2 ring-emerald-500/20 shrink-0">
-                  {user.displayName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"}
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-slate-200 truncate">
-                  {user.displayName || "Investor"}
-                </p>
-                <p className="text-[10px] text-slate-400 truncate">
-                  {user.email || ""}
-                </p>
-              </div>
-              <button
-                onClick={() => signOut()}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                title="Sign out"
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
-          )}
         </div>
       </aside>
 
@@ -310,12 +275,11 @@ export function Sidebar() {
           })}
         </div>
 
-        {/* Desktop Footer: Theme Quick Toggle & User Profile Section */}
-        <div className="p-2.5 border-t border-slate-800/80 bg-slate-950/60 space-y-2">
-          {/* Quick Theme Toggle */}
+        {/* Desktop Theme Toggle Section */}
+        <div className="p-3 border-t border-slate-800/80 bg-slate-950/60">
           <button
             onClick={toggleTheme}
-            className={`w-full flex items-center p-2 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/70 text-xs text-slate-300 transition-colors ${
+            className={`w-full flex items-center p-2.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/70 text-xs text-slate-300 transition-colors ${
               collapsed ? "justify-center" : "justify-between"
             }`}
             title={`Toggle Theme (Current: ${theme})`}
@@ -334,44 +298,6 @@ export function Sidebar() {
               </span>
             )}
           </button>
-
-          {user && (
-            <div className={`flex items-center gap-3 p-2 rounded-xl bg-slate-900/60 border border-slate-800/70 ${collapsed ? "justify-center" : ""}`}>
-              {user.photoURL ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user.photoURL}
-                  alt={user.displayName || "User"}
-                  className="w-8 h-8 rounded-full object-cover ring-2 ring-emerald-500/30 shrink-0"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-slate-800 text-emerald-400 font-bold flex items-center justify-center ring-2 ring-emerald-500/20 shrink-0 text-xs">
-                  {user.displayName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"}
-                </div>
-              )}
-
-              {!collapsed && (
-                <div className="min-w-0 flex-1 animate-fadeIn">
-                  <p className="text-xs font-semibold text-slate-200 truncate">
-                    {user.displayName || "Investor"}
-                  </p>
-                  <p className="text-[10px] text-slate-400 truncate">
-                    {user.email || ""}
-                  </p>
-                </div>
-              )}
-
-              {!collapsed && (
-                <button
-                  onClick={() => signOut()}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                  title="Sign out"
-                >
-                  <LogOut size={15} />
-                </button>
-              )}
-            </div>
-          )}
         </div>
       </aside>
     </>
