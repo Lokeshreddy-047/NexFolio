@@ -276,8 +276,8 @@ export default function MarketsPage() {
                       </div>
 
                       <div className="text-right shrink-0">
-                        <p className="text-xs font-black text-white">₹{stock.current_price.toLocaleString("en-IN")}</p>
-                        <p className="text-[11px] font-bold text-emerald-400">+{stock.day_change_pct}%</p>
+                        <p className="text-xs font-black text-white font-mono">₹{stock.current_price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <p className="text-[11px] font-bold text-emerald-400 font-mono">+{stock.day_change_pct}%</p>
                       </div>
                     </Link>
                   ))}
@@ -309,8 +309,10 @@ export default function MarketsPage() {
                       </div>
 
                       <div className="text-right shrink-0">
-                        <p className="text-xs font-black text-white">₹{stock.current_price.toLocaleString("en-IN")}</p>
-                        <p className="text-[11px] font-bold text-rose-400">{stock.day_change_pct}%</p>
+                        <p className="text-xs font-black text-white font-mono">₹{stock.current_price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <p className="text-[11px] font-bold text-rose-400 font-mono">
+                          {stock.day_change_pct > 0 ? `+${stock.day_change_pct}%` : `${stock.day_change_pct}%`}
+                        </p>
                       </div>
                     </Link>
                   ))}
@@ -495,18 +497,19 @@ export default function MarketsPage() {
 
                           {/* 52W Range */}
                           <td className="py-3 px-4 hidden md:table-cell text-center">
-                            <div className="w-24 mx-auto space-y-1">
+                            <div className="w-28 mx-auto space-y-1">
                               <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
                                 <div
                                   className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full"
                                   style={{
-                                    width: `${Math.max(5, Math.min(100, ((stock.current_price - stock.low_52w) / (stock.high_52w - stock.low_52w || 1)) * 100))}%`
+                                    width: `${Math.max(5, Math.min(100, ((price - stock.low_52w) / (stock.high_52w - stock.low_52w || 1)) * 100))}%`
                                   }}
                                 />
                               </div>
-                              <div className="flex justify-between text-[9px] text-slate-500 font-mono">
-                                <span>{stock.low_52w}</span>
-                                <span>{stock.high_52w}</span>
+                              <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono tracking-tight">
+                                <span>₹{stock.low_52w >= 1000 ? Math.round(stock.low_52w).toLocaleString("en-IN") : stock.low_52w.toFixed(1)}</span>
+                                <span className="text-slate-600 font-sans text-[8px]">•</span>
+                                <span>₹{stock.high_52w >= 1000 ? Math.round(stock.high_52w).toLocaleString("en-IN") : stock.high_52w.toFixed(1)}</span>
                               </div>
                             </div>
                           </td>

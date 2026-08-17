@@ -160,7 +160,7 @@ class LiveMarketProvider(MarketDataProvider):
 
         # Overlay top gainers, losers, and most active
         all_movers = base_resp.top_gainers + base_resp.top_losers + base_resp.most_active
-        mover_symbols = [m.symbol for m in all_movers]
+        mover_symbols = list(set([m.symbol for m in all_movers]))
         mover_quotes = await self._adapter.fetch_snapshot(mover_symbols)
         for m in all_movers:
             can_sym = SymbolNormalizer.to_canonical(m.symbol)
@@ -170,6 +170,14 @@ class LiveMarketProvider(MarketDataProvider):
                 m.day_change = ov["day_change"]
                 m.day_change_pct = ov["day_change_pct"]
                 m.volume = ov.get("volume", m.volume)
+
+        # Re-rank top gainers and losers cleanly after quote updates
+        unique_movers = list({m.symbol: m for m in all_movers}.values())
+        sorted_by_gain = sorted(unique_movers, key=lambda x: x.day_change_pct, reverse=True)
+        gainers_pool = [s for s in sorted_by_gain if s.day_change_pct >= 0]
+        losers_pool = [s for s in sorted_by_gain if s.day_change_pct <= 0]
+        base_resp.top_gainers = gainers_pool[:6] if gainers_pool else sorted_by_gain[:6]
+        base_resp.top_losers = losers_pool[-6:][::-1] if losers_pool else sorted_by_gain[-6:][::-1]
 
         return base_resp
 
@@ -212,6 +220,12 @@ class LiveMarketProvider(MarketDataProvider):
                 stock.day_change = ov["day_change"]
                 stock.day_change_pct = ov["day_change_pct"]
                 stock.volume = ov.get("volume", stock.volume)
+
+        # Re-sort if sorted by day_change_pct or current_price
+        if sort_by == "day_change_pct":
+            base_resp.stocks.sort(key=lambda x: x.day_change_pct, reverse=(sort_order.lower() == "desc"))
+        elif sort_by == "current_price":
+            base_resp.stocks.sort(key=lambda x: x.current_price, reverse=(sort_order.lower() == "desc"))
 
         base_resp.data_badge = badge.value
         base_resp.provider = self.provider_id

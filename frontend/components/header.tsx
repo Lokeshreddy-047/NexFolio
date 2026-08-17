@@ -422,7 +422,7 @@ export function Header({
                 setIsThemeOpen(false);
                 setIsNotificationOpen(false);
               }}
-              className="p-1 rounded-full ring-2 ring-emerald-500/20 hover:ring-emerald-500/40 transition-all"
+              className="p-1 rounded-full ring-2 ring-emerald-500/20 hover:ring-emerald-500/40 transition-all focus:outline-none"
             >
               {user?.photoURL ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -444,35 +444,102 @@ export function Header({
                   onClick={() => setIsProfileOpen(false)}
                   className="fixed inset-0 z-40"
                 />
-                <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                  <div className="px-3 py-2 border-b border-slate-800/80 mb-1">
-                    <p className="text-xs font-semibold text-white truncate">
-                      {user?.displayName || "Investor"}
-                    </p>
-                    <p className="text-[11px] text-slate-400 truncate">
-                      {user?.email}
-                    </p>
+                <div className="absolute right-0 mt-2 w-64 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-1.5">
+                  {/* User Profile Header Card */}
+                  <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80 mb-1 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-500 to-indigo-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-md">
+                      {user?.displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-bold text-white truncate">
+                          {user?.displayName || "Investor"}
+                        </p>
+                        <span className="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 font-extrabold text-[9px] border border-emerald-500/20 shrink-0">
+                          PRO
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 truncate">
+                        {user?.email}
+                      </p>
+                    </div>
                   </div>
 
-                  <Link
-                    href="/portfolios"
-                    onClick={() => setIsProfileOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-                  >
-                    <Briefcase size={14} className="text-slate-400" />
-                    <span>Manage Portfolios</span>
-                  </Link>
+                  {/* Navigation Links */}
+                  <div className="space-y-0.5">
+                    <Link
+                      href="/settings"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                    >
+                      <Shield size={15} className="text-emerald-400" />
+                      <span>Account & Security Settings</span>
+                    </Link>
 
-                  <Link
-                    href="/test-risk"
-                    onClick={() => setIsProfileOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-                  >
-                    <Shield size={14} className="text-slate-400" />
-                    <span>Risk Laboratory</span>
-                  </Link>
+                    <Link
+                      href="/portfolios"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                    >
+                      <Briefcase size={15} className="text-indigo-400" />
+                      <span>Manage Portfolios</span>
+                    </Link>
 
-                  <div className="pt-2 mt-1 border-t border-slate-800">
+                    <Link
+                      href="/holdings"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                    >
+                      <Check size={15} className="text-teal-400" />
+                      <span>Holdings & Allocations</span>
+                    </Link>
+
+                    <Link
+                      href="/watchlist"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                    >
+                      <Bell size={15} className="text-amber-400" />
+                      <span>My Watchlist</span>
+                    </Link>
+                  </div>
+
+                  {/* Theme Quick Switcher in Profile Dropdown */}
+                  <div className="pt-2 border-t border-slate-800/80 px-1">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1 px-1 font-medium">
+                      <span>Appearance</span>
+                      <span className="capitalize font-bold text-slate-300">{resolvedTheme}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800/80">
+                      <button
+                        onClick={() => setTheme("dark")}
+                        className={`py-1 px-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors ${
+                          theme === "dark" ? "bg-slate-800 text-teal-300 border border-teal-500/30" : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        <Moon size={11} /> Dark
+                      </button>
+                      <button
+                        onClick={() => setTheme("light")}
+                        className={`py-1 px-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors ${
+                          theme === "light" ? "bg-slate-800 text-amber-400 border border-amber-500/30" : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        <Sun size={11} /> Light
+                      </button>
+                      <button
+                        onClick={() => setTheme("system")}
+                        className={`py-1 px-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors ${
+                          theme === "system" ? "bg-slate-800 text-indigo-300 border border-indigo-500/30" : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        <Laptop size={11} /> Auto
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Sign Out Action */}
+                  <div className="pt-1.5 border-t border-slate-800/80">
                     <button
                       onClick={() => signOut()}
                       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-rose-400 hover:bg-rose-500/10 transition-colors font-semibold"

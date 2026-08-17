@@ -3,12 +3,16 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 BASE_DIR = Path(__file__).resolve().parents[2]
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+SNAPSHOT_PATH = DATA_DIR / "market_reference_snapshot.json"
+COMPANY_NAMES_PATH = DATA_DIR / "company_names.json"
 SECTOR_MAPPING_PATH = BASE_DIR / "ml" / "preprocessing" / "sector_mapping.json"
 MARKET_PARQUET_PATH = BASE_DIR / "ml" / "datasets" / "features" / "market_features.parquet"
 
 _stocks_cache: Optional[List[Dict]] = None
 _symbol_lookup: Optional[Dict[str, Dict]] = None
 
+# Base popular names fallback
 POPULAR_NAMES: Dict[str, str] = {
     "RELIANCE.NS": "Reliance Industries Ltd",
     "TCS.NS": "Tata Consultancy Services Ltd",
@@ -52,19 +56,41 @@ POPULAR_NAMES: Dict[str, str] = {
     "ZOMATO.NS": "Zomato Ltd",
 }
 
+# Dynamically load complete company names map if available
+if COMPANY_NAMES_PATH.exists():
+    try:
+        with open(COMPANY_NAMES_PATH, "r", encoding="utf-8") as f:
+            _loaded_names = json.load(f)
+            POPULAR_NAMES.update(_loaded_names)
+    except Exception:
+        pass
+
 
 def _clean_symbol(sym: str) -> str:
     sym = sym.strip().upper()
-    if not sym.endswith(".NS") and not "." in sym:
+    if not sym.endswith(".NS") and "." not in sym:
         sym = f"{sym}.NS"
     return sym
 
 
-def _load_reference_prices_from_parquet() -> Dict[str, float]:
+def _load_reference_prices_from_snapshot() -> Dict[str, float]:
     """
-    Extracts the latest verified reference closing prices from market_features.parquet.
+    Extracts the latest verified reference closing prices from lightweight snapshot or parquet.
     """
     prices: Dict[str, float] = {}
+    if SNAPSHOT_PATH.exists():
+        try:
+            with open(SNAPSHOT_PATH, "r", encoding="utf-8") as f:
+                snap_data = json.load(f)
+            for sym, item in snap_data.items():
+                p = float(item.get("current_price", 0.0))
+                if p > 0:
+                    prices[sym.upper()] = p
+                    prices[sym.upper().replace(".NS", "")] = p
+            return prices
+        except Exception:
+            pass
+
     if MARKET_PARQUET_PATH.exists():
         try:
             import pandas as pd
@@ -78,7 +104,7 @@ def _load_reference_prices_from_parquet() -> Dict[str, float]:
                 close_val = round(float(row["close"]), 2)
                 prices[ticker_sym] = close_val
                 prices[ticker_sym.replace(".NS", "")] = close_val
-        except Exception as exc:
+        except Exception:
             pass
     return prices
 
@@ -88,9 +114,37 @@ def _load_stocks() -> List[Dict]:
     if _stocks_cache is not None:
         return _stocks_cache
 
-    ref_prices = _load_reference_prices_from_parquet()
+    ref_prices = _load_reference_prices_from_snapshot()
     stocks = []
     lookup = {}
+
+    # Prefer reading rich snapshot first
+    if SNAPSHOT_PATH.exists():
+        try:
+            with open(SNAPSHOT_PATH, "r", encoding="utf-8") as f:
+                snap_data = json.load(f)
+            for sym, item in snap_data.items():
+                base_symbol = item.get("base_symbol", sym.replace(".NS", ""))
+                company_name = item.get("company_name") or POPULAR_NAMES.get(sym, f"{base_symbol} Ltd")
+                ref_p = float(item.get("current_price", 100.0))
+                stock_entry = {
+                    "symbol": sym,
+                    "base_symbol": base_symbol,
+                    "company_name": company_name,
+                    "sector": item.get("sector", "Diversified"),
+                    "asset_type": "Equity",
+                    "reference_price": ref_p,
+                }
+                stocks.append(stock_entry)
+                lookup[sym.upper()] = stock_entry
+                lookup[base_symbol.upper()] = stock_entry
+
+            if stocks:
+                _stocks_cache = stocks
+                _symbol_lookup = lookup
+                return stocks
+        except Exception:
+            pass
 
     if SECTOR_MAPPING_PATH.exists():
         with open(SECTOR_MAPPING_PATH, "r", encoding="utf-8") as f:
@@ -98,11 +152,10 @@ def _load_stocks() -> List[Dict]:
 
         for symbol, sector in mapping.items():
             base_symbol = symbol.replace(".NS", "")
-            company_name = POPULAR_NAMES.get(symbol, f"{base_symbol} Corporation")
-            # Lookup price from parquet, falling back to canonical index
+            company_name = POPULAR_NAMES.get(symbol, f"{base_symbol} Ltd")
             ref_p = ref_prices.get(symbol.upper(), ref_prices.get(base_symbol.upper(), 0.0))
             if ref_p <= 0.0:
-                ref_p = 100.0  # safe baseline if completely absent from dataset
+                ref_p = 100.0
 
             item = {
                 "symbol": symbol,
@@ -116,22 +169,21 @@ def _load_stocks() -> List[Dict]:
             lookup[symbol.upper()] = item
             lookup[base_symbol.upper()] = item
     else:
-        # Fallback stocks if file not found
-        for symbol, name, sector in [
-            ("TCS.NS", "Tata Consultancy Services Ltd", "Information Technology"),
-            ("RELIANCE.NS", "Reliance Industries Ltd", "Energy"),
-            ("INFY.NS", "Infosys Ltd", "Information Technology"),
-            ("HDFCBANK.NS", "HDFC Bank Ltd", "Financial Services"),
+        for symbol, name, sector, price in [
+            ("RELIANCE.NS", "Reliance Industries Ltd", "Energy", 1334.80),
+            ("TCS.NS", "Tata Consultancy Services Ltd", "Information Technology", 2452.70),
+            ("INFY.NS", "Infosys Ltd", "Information Technology", 1175.10),
+            ("HDFCBANK.NS", "HDFC Bank Ltd", "Financial Services", 1680.00),
+            ("ABB.NS", "ABB India Ltd", "Capital Goods", 7600.00),
         ]:
             base_symbol = symbol.replace(".NS", "")
-            ref_p = ref_prices.get(symbol.upper(), ref_prices.get(base_symbol.upper(), 100.0))
             item = {
                 "symbol": symbol,
                 "base_symbol": base_symbol,
                 "company_name": name,
                 "sector": sector,
                 "asset_type": "Equity",
-                "reference_price": ref_p,
+                "reference_price": price,
             }
             stocks.append(item)
             lookup[symbol.upper()] = item
@@ -174,14 +226,16 @@ def get_stock_info(symbol: str) -> Dict:
     if base in _symbol_lookup:
         return _symbol_lookup[base]
 
-    ref_prices = _load_reference_prices_from_parquet()
+    ref_prices = _load_reference_prices_from_snapshot()
     ref_p = ref_prices.get(clean, ref_prices.get(base, 100.0))
+    company_name = POPULAR_NAMES.get(clean, f"{base} Ltd")
 
     return {
         "symbol": clean,
         "base_symbol": base,
-        "company_name": f"{base} Asset",
+        "company_name": company_name,
         "sector": "Other",
         "asset_type": "Equity",
         "reference_price": ref_p,
     }
+

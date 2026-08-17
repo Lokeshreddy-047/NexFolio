@@ -64,3 +64,4 @@ ai-service/ml/reports/
 # Python cache inside ai-service
 # =========================
 ai-service/**/__pycache__/
+.vercel
