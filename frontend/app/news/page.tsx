@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
+import { Sidebar } from "@/components/sidebar";
+import { Header } from "@/components/header";
 import {
   Newspaper,
   TrendingUp,
@@ -164,33 +166,43 @@ export default function MarketNewsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#070b14] text-slate-900 dark:text-slate-100 p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800/80 pb-6">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
-            <Newspaper size={13} />
-            Institutional Intelligence Wire
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-slate-500 dark:from-white dark:via-slate-200 dark:to-slate-400 bg-clip-text text-transparent">
-            Real-Time Market News & Sentiment Radar
-          </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Curated Indian equity market intelligence with NLP sentiment polarity, macroeconomic tracking, and active portfolio impact mapping.
-          </p>
-        </div>
+    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+      <Sidebar />
+      <div className="flex flex-col flex-1 min-w-0">
+        <Header
+          title="Market News & Sentiment Radar"
+          subtitle="Real-time financial intelligence, macro radar, and active portfolio impact mapping"
+          activePortfolioId={activePortfolioId}
+          onPortfolioChange={(id) => handlePortfolioChange(id)}
+        />
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm transition-all active:scale-95 disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-            Refresh Feed
-          </button>
-        </div>
-      </div>
+        <main className="flex-1 p-4 lg:p-8 space-y-6 max-w-[1600px] w-full mx-auto">
+          {/* Header Sub-Section */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                <Newspaper size={13} />
+                Institutional Intelligence Wire
+              </div>
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                Live Indian Financial Headlines & Sector Signals
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-400 mt-1">
+                Curated Indian equity market intelligence with NLP sentiment polarity, macroeconomic tracking, and active portfolio impact mapping.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 shadow-sm transition-all active:scale-95 disabled:opacity-50"
+              >
+                <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+                Refresh Feed
+              </button>
+            </div>
+          </div>
 
       {/* Top Macroeconomic Intermarket Radar Ribbon */}
       {macroIndicators.length > 0 && (
@@ -443,6 +455,8 @@ export default function MarketNewsPage() {
           })}
         </div>
       )}
+        </main>
+      </div>
     </div>
   );
 }
