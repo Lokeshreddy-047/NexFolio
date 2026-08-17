@@ -235,36 +235,36 @@ class ReferenceMarketProvider(MarketDataProvider):
 
         indices = [
             MarketIndex(
-                symbol="NIFTY 50",
+                symbol="^NSEI",
                 name="NIFTY 50 Benchmark",
-                current_level=24367.50,
-                day_change=142.80,
-                day_change_pct=0.59,
-                sparkline=[24200.0, 24240.0, 24210.0, 24310.0, 24290.0, 24367.5]
+                current_level=24287.65,
+                day_change=-78.35,
+                day_change_pct=-0.32,
+                sparkline=[24350.0, 24320.0, 24290.0, 24310.0, 24260.0, 24287.65]
             ),
             MarketIndex(
-                symbol="SENSEX",
+                symbol="^BSESN",
                 name="BSE SENSEX",
-                current_level=79980.20,
-                day_change=418.50,
-                day_change_pct=0.53,
-                sparkline=[79400.0, 79550.0, 79480.0, 79820.0, 79750.0, 79980.2]
-            ),
-            MarketIndex(
-                symbol="BANK NIFTY",
-                name="NIFTY Bank Index",
-                current_level=51120.40,
-                day_change=310.20,
-                day_change_pct=0.61,
-                sparkline=[50700.0, 50850.0, 50780.0, 50990.0, 51040.0, 51120.4]
-            ),
-            MarketIndex(
-                symbol="NIFTY IT",
-                name="NIFTY IT Sector",
-                current_level=39840.10,
-                day_change=-145.30,
+                current_level=77728.16,
+                day_change=-281.09,
                 day_change_pct=-0.36,
-                sparkline=[40100.0, 40050.0, 39980.0, 39920.0, 39890.0, 39840.1]
+                sparkline=[78000.0, 77920.0, 77810.0, 77850.0, 77700.0, 77728.16]
+            ),
+            MarketIndex(
+                symbol="^NSEBANK",
+                name="NIFTY Bank Index",
+                current_level=57497.80,
+                day_change=6.70,
+                day_change_pct=0.01,
+                sparkline=[57400.0, 57450.0, 57420.0, 57510.0, 57480.0, 57497.80]
+            ),
+            MarketIndex(
+                symbol="^CNXIT",
+                name="NIFTY IT Sector",
+                current_level=30807.80,
+                day_change=-549.95,
+                day_change_pct=-1.75,
+                sparkline=[31300.0, 31200.0, 31050.0, 30950.0, 30880.0, 30807.80]
             ),
         ]
 

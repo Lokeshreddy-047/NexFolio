@@ -85,18 +85,25 @@ export function Header({
     }
   };
 
+  const onPortfolioChangeRef = React.useRef(onPortfolioChange);
+  const activePortfolioIdRef = React.useRef(activePortfolioId);
   useEffect(() => {
-    if (user) {
+    onPortfolioChangeRef.current = onPortfolioChange;
+    activePortfolioIdRef.current = activePortfolioId;
+  }, [onPortfolioChange, activePortfolioId]);
+
+  useEffect(() => {
+    if (user?.uid) {
       getPortfolios()
         .then((data) => {
           setPortfolios(data);
-          if (data.length > 0 && !activePortfolioId && onPortfolioChange) {
-            onPortfolioChange(data[0].id);
+          if (data.length > 0 && !activePortfolioIdRef.current && onPortfolioChangeRef.current) {
+            onPortfolioChangeRef.current(data[0].id);
           }
         })
         .catch((err) => console.warn("Failed loading portfolios in header:", err));
     }
-  }, [user, activePortfolioId, onPortfolioChange]);
+  }, [user?.uid]);
 
   const activePortfolio = portfolios.find((p) => p.id === activePortfolioId) || portfolios[0];
 

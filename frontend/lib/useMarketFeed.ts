@@ -47,9 +47,11 @@ export function useMarketFeed(symbols?: string[]) {
   }, []);
 
   const connectStream = useCallback(() => {
-    if (typeof window === "undefined") return;
-
-    const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
+    const apiBase = (
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      "http://localhost:8000"
+    ).replace(/\/$/, "");
     const symQuery = symbols && symbols.length > 0 ? `?symbols=${encodeURIComponent(symbols.join(","))}` : "";
     const streamUrl = `${apiBase}/api/v1/markets/stream${symQuery}`;
 
