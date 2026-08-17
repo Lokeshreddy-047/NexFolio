@@ -93,7 +93,7 @@ class YahooFinanceAdapter(BaseBrokerAdapter):
         if market_open and age_seconds <= self._freshness_window:
             return DataBadge.LIVE, f"Fresh market quote (Age: {int(age_seconds)}s)"
 
-        if not market_open:
+        if not market_open and age_seconds <= self._freshness_window:
             return DataBadge.LIVE, "NSE trading session closed; displaying official exchange closing price"
 
         return DataBadge.DELAYED, f"Delayed market quote (Age: {int(age_seconds)}s)"
