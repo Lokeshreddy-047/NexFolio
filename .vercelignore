@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+ai-service/venv
+ml
+ai-service
+data
+*.parquet
+*.csv
+.turbo
