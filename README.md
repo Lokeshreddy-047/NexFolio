@@ -93,3 +93,9 @@ All **33 backend unit and integration tests** pass with 100% code integrity.
 
 ## 📜 License & Citation
 Developed for advanced portfolio risk profiling and explainable financial analytics. See [DEPLOYMENT.md](file:///d:/nexfolio/DEPLOYMENT.md) for deployment specifications.
+
+---
+
+## 👥 Core Contributors & Project Roles
+* **Tejas Patil** ([@patiltejas2406](https://github.com/patiltejas2406)) – AI/ML pipeline design, predictive risk modeling (Random Forest, LSTM, NLP), FastAPI risk inference engine, and System Architecture[cite: 1].
+* **Lokesh Reddy** ([@Lokeshreddy-047](https://github.com/Lokeshreddy-047)) – Full-stack microservices, database schemas, and frontend integration[cite: 1].
