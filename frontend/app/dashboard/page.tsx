@@ -25,10 +25,14 @@ import {
   getCommandCenter,
   getPerformanceTimeline,
   takePortfolioSnapshot,
+  getIPOs,
+  getMarketNews,
   type PortfolioSummary,
   type CommandCenterOverviewResponse,
   type TimelinePerformanceResponse,
   type HoldingItem,
+  type IPOItem,
+  type NewsItem,
 } from "@/lib/api";
 
 const ALLOCATION_COLORS = [
@@ -59,6 +63,8 @@ export default function DashboardPage() {
   const [activePortfolioId, setActivePortfolioId] = useState<string>("");
   const [overview, setOverview] = useState<CommandCenterOverviewResponse | null>(null);
   const [timeline, setTimeline] = useState<TimelinePerformanceResponse | null>(null);
+  const [topIpo, setTopIpo] = useState<IPOItem | null>(null);
+  const [breakingNews, setBreakingNews] = useState<NewsItem[]>([]);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [timelineLoading, setTimelineLoading] = useState<boolean>(false);
@@ -157,6 +163,22 @@ export default function DashboardPage() {
       loadTimelineData(activePortfolioId, timeRange);
     }
   }, [activePortfolioId, timeRange, loadCommandCenterData, loadTimelineData]);
+
+  useEffect(() => {
+    async function loadIpoAndNews() {
+      try {
+        const [ipoList, newsList] = await Promise.all([
+          getIPOs("OPEN").catch(() => []),
+          getMarketNews().catch(() => [])
+        ]);
+        if (ipoList.length > 0) setTopIpo(ipoList[0]);
+        if (newsList.length > 0) setBreakingNews(newsList.slice(0, 2));
+      } catch {
+        // silent fallback
+      }
+    }
+    loadIpoAndNews();
+  }, []);
 
   // Handle Portfolio Switch
   const handlePortfolioChange = (newId: string) => {
@@ -739,6 +761,122 @@ export default function DashboardPage() {
               >
                 <span>Explore Deep AI Insights (Milestone 4)</span>
                 <span>➔</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* 3.5. PRIMARY MARKETS (IPO) & MARKET NEWS WIRE WIDGETS */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left: IPO Radar Spotlight */}
+            <div className="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 backdrop-blur-md shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-bold">
+                      HOT IPO
+                    </span>
+                    <h3 className="text-sm font-bold text-white">IPO Spotlight</h3>
+                  </div>
+                  <Link href="/ipo" className="text-xs text-emerald-400 hover:underline">
+                    Explore All IPOs ➔
+                  </Link>
+                </div>
+
+                {topIpo ? (
+                  <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/60 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="font-bold text-slate-100 text-sm">{topIpo.company_name}</div>
+                        <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                          ₹{topIpo.price_band_low} - ₹{topIpo.price_band_high} • Lot: {topIpo.lot_size} shares
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        {topIpo.ai_analysis.verdict.replace(/_/g, " ")}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/60 text-[11px] font-mono">
+                      <div>
+                        <span className="text-slate-500 text-[10px]">Live GMP</span>
+                        <div className="font-bold text-emerald-400">+{topIpo.gmp_pct}%</div>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[10px]">AI Score</span>
+                        <div className="font-bold text-slate-200">{topIpo.ai_analysis.quality_score}/100</div>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[10px]">Subscription</span>
+                        <div className="font-bold text-slate-200">{topIpo.subscription.total_multiple}x</div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-xs text-slate-500">
+                    No active IPOs open for bidding today.
+                  </div>
+                )}
+              </div>
+
+              <Link
+                href="/ipo"
+                className="mt-4 w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold text-center border border-slate-700 transition-all flex items-center justify-center gap-1.5"
+              >
+                <span>View Full AI Risk Scorecard & GMP</span>
+              </Link>
+            </div>
+
+            {/* Right: Live Market News Wire */}
+            <div className="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 backdrop-blur-md shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-bold">
+                      LIVE WIRE
+                    </span>
+                    <h3 className="text-sm font-bold text-white">Market Intelligence News</h3>
+                  </div>
+                  <Link href="/news" className="text-xs text-blue-400 hover:underline">
+                    View News Feed ➔
+                  </Link>
+                </div>
+
+                <div className="space-y-2.5">
+                  {breakingNews.length > 0 ? (
+                    breakingNews.map((n) => (
+                      <div
+                        key={n.id}
+                        className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/60 text-xs hover:border-slate-700 transition-all space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-400 font-semibold">{n.source} • {n.time_ago}</span>
+                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                            n.sentiment === "BULLISH"
+                              ? "bg-emerald-500/10 text-emerald-400"
+                              : n.sentiment === "BEARISH"
+                              ? "bg-rose-500/10 text-rose-400"
+                              : "bg-slate-500/10 text-slate-400"
+                          }`}>
+                            {n.sentiment}
+                          </span>
+                        </div>
+                        <div className="font-bold text-slate-200 text-xs line-clamp-1">{n.headline}</div>
+                        <div className="text-[11px] text-slate-400 line-clamp-1">{n.summary}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-8 text-center text-xs text-slate-500">
+                      No market news updates recorded.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <Link
+                href="/news"
+                className="mt-4 w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold text-center border border-slate-700 transition-all flex items-center justify-center gap-1.5"
+              >
+                <span>Read Full Market Sentiment Wire</span>
               </Link>
             </div>
           </div>

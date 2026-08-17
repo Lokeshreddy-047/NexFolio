@@ -19,6 +19,8 @@ from app.api.watchlists import router as watchlists_router
 from app.api.reports import router as reports_router
 from app.api.notifications import router as notifications_router
 from app.api.stream import router as stream_router
+from app.api.v1.endpoints.ipo import router as ipo_router
+from app.api.v1.endpoints.news import router as news_router
 from app.middleware.security import SecurityHeadersMiddleware
 from app.middleware.rate_limit import SlidingWindowRateLimiter
 from app.middleware.error_handler import register_exception_handlers
@@ -69,6 +71,8 @@ app.include_router(risk_router, prefix=settings.api_prefix)
 app.include_router(explain_router, prefix=settings.api_prefix)
 app.include_router(recommendations_router, prefix=settings.api_prefix)
 app.include_router(prediction_history_router, prefix=settings.api_prefix)
+app.include_router(ipo_router, prefix=f"{settings.api_prefix}/ipo", tags=["IPO Radar"])
+app.include_router(news_router, prefix=f"{settings.api_prefix}/news", tags=["Market News"])
 
 
 @app.get("/", tags=["Root"])

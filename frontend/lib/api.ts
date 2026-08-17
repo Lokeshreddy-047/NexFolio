@@ -1126,3 +1126,231 @@ export async function getPortfolioTaxReportCSV(
   if (!res.ok) throw new Error("Failed to export tax CSV");
   return res.text();
 }
+
+// -------------------------------------------------------------
+// IPO Tracker & AI Risk Analyzer Types & API
+// -------------------------------------------------------------
+export type IPOStatus = "UPCOMING" | "OPEN" | "CLOSED" | "LISTED";
+export type IPOMarketType = "MAINBOARD" | "SME";
+export type IPORiskVerdict = "STRONG_SUBSCRIBE" | "SUBSCRIBE_LONG_TERM" | "NEUTRAL" | "AVOID";
+
+export interface IPOSubscription {
+  qib_multiple: number;
+  nii_multiple: number;
+  retail_multiple: number;
+  employee_multiple?: number;
+  total_multiple: number;
+  updated_at: string;
+}
+
+export interface IPOFinancials {
+  revenue_cagr_3yr: number;
+  ebitda_margin: number;
+  pat_margin: number;
+  roe: number;
+  roce: number;
+  debt_to_equity: number;
+  eps: number;
+  historical_revenue: { year: string; amount_cr: number }[];
+  historical_pat: { year: string; amount_cr: number }[];
+}
+
+export interface IPOPeerComparison {
+  peer_name: string;
+  pe_ratio: number;
+  pb_ratio: number;
+  market_cap_cr: number;
+}
+
+export interface IPOAnalysisResult {
+  quality_score: number;
+  verdict: IPORiskVerdict;
+  confidence: number;
+  valuation_score: number;
+  capital_allocation_score: number;
+  financial_health_score: number;
+  demand_momentum_score: number;
+  asking_pe: number;
+  industry_median_pe: number;
+  valuation_discount_pct: number;
+  estimated_allotment_odds_pct: number;
+  estimated_profit_per_lot: number;
+  top_catalysts: string[];
+  key_red_flags: string[];
+  summary_verdict: string;
+}
+
+export interface IPOItem {
+  id: string;
+  company_name: string;
+  symbol: string;
+  market_type: IPOMarketType;
+  sector: string;
+  logo_initials: string;
+  status: IPOStatus;
+  price_band_low: number;
+  price_band_high: number;
+  lot_size: number;
+  min_investment: number;
+  total_issue_size_cr: number;
+  fresh_issue_cr: number;
+  ofs_cr: number;
+  fresh_issue_pct: number;
+  open_date: string;
+  close_date: string;
+  allotment_date: string;
+  listing_date: string;
+  gmp_inr: number;
+  gmp_pct: number;
+  estimated_listing_price: number;
+  subscription: IPOSubscription;
+  financials: IPOFinancials;
+  peers: IPOPeerComparison[];
+  registrar: string;
+  registrar_url: string;
+  lead_managers: string[];
+  ai_analysis: IPOAnalysisResult;
+}
+
+export interface ListedIPOPosPerformance {
+  id: string;
+  company_name: string;
+  symbol: string;
+  sector: string;
+  listing_date: string;
+  issue_price: number;
+  listing_price: number;
+  listing_gain_pct: number;
+  current_price: number;
+  gain_since_listing_pct: number;
+  status: string;
+}
+
+export interface IPOOverviewMetrics {
+  active_bidding_count: number;
+  upcoming_count: number;
+  total_capital_raised_cr: number;
+  average_listing_gain_pct: number;
+  top_gmp_pick: string;
+  top_gmp_pct: number;
+}
+
+export async function getIPOs(status?: IPOStatus, marketType?: IPOMarketType): Promise<IPOItem[]> {
+  const params = new URLSearchParams();
+  if (status) params.append("status", status);
+  if (marketType) params.append("market_type", marketType);
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest<IPOItem[]>(`/api/v1/ipo${qs}`);
+}
+
+export async function getIPODetail(ipoId: string): Promise<IPOItem> {
+  return apiRequest<IPOItem>(`/api/v1/ipo/${encodeURIComponent(ipoId)}`);
+}
+
+export async function getIPOOverviewMetrics(): Promise<IPOOverviewMetrics> {
+  return apiRequest<IPOOverviewMetrics>(`/api/v1/ipo/metrics/overview`);
+}
+
+export async function getListedIPOPerformance(): Promise<ListedIPOPosPerformance[]> {
+  return apiRequest<ListedIPOPosPerformance[]>(`/api/v1/ipo/performance/listed`);
+}
+
+// -------------------------------------------------------------
+// Market News, Sentiment Intelligence & Macro Radar Types & API
+// -------------------------------------------------------------
+export type NewsSentiment = "BULLISH" | "BEARISH" | "NEUTRAL";
+export type NewsImpact = "HIGH" | "MEDIUM" | "LOW";
+export type NewsCategory = "MACRO_POLICY" | "EARNINGS" | "DEALS_MA" | "SECTOR_TRENDS" | "REGULATORY" | "MARKET_PULSE";
+
+export interface MacroIndicator {
+  id: string;
+  name: string;
+  symbol: string;
+  current_value: string;
+  numeric_value: number;
+  unit: string;
+  day_change: number;
+  day_change_pct: number;
+  trend: "BULLISH" | "BEARISH" | "NEUTRAL";
+  impact_note: string;
+  updated_at: string;
+}
+
+export interface RelatedStockChip {
+  symbol: string;
+  base_symbol: string;
+  company_name: string;
+  sector: string;
+  day_change_pct: number;
+  current_price: number;
+}
+
+export interface NewsItem {
+  id: string;
+  headline: string;
+  summary: string;
+  source: string;
+  category: NewsCategory;
+  sentiment: NewsSentiment;
+  sentiment_score: number;
+  impact_severity: NewsImpact;
+  published_at: string;
+  time_ago: string;
+  url?: string;
+  related_stocks: RelatedStockChip[];
+  impacted_sectors: string[];
+  is_breaking: boolean;
+  ai_takeaway: string;
+}
+
+export interface PortfolioNewsImpact {
+  portfolio_id: string;
+  portfolio_name: string;
+  total_relevant_news_count: number;
+  overall_portfolio_sentiment: NewsSentiment;
+  sentiment_score: number;
+  articles: NewsItem[];
+}
+
+export interface NewsOverviewResponse {
+  macro_indicators: MacroIndicator[];
+  breaking_news: NewsItem[];
+  top_headlines: NewsItem[];
+  total_articles_count: number;
+  sentiment_ratio: {
+    bullish_pct: number;
+    bearish_pct: number;
+    neutral_pct: number;
+  };
+}
+
+export async function getMarketNews(
+  category?: NewsCategory,
+  sentiment?: NewsSentiment,
+  sector?: string,
+  search?: string
+): Promise<NewsItem[]> {
+  const params = new URLSearchParams();
+  if (category) params.append("category", category);
+  if (sentiment) params.append("sentiment", sentiment);
+  if (sector && sector !== "ALL") params.append("sector", sector);
+  if (search) params.append("search", search);
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest<NewsItem[]>(`/api/v1/news${qs}`);
+}
+
+export async function getNewsOverview(): Promise<NewsOverviewResponse> {
+  return apiRequest<NewsOverviewResponse>(`/api/v1/news/overview`);
+}
+
+export async function getMacroIndicators(): Promise<MacroIndicator[]> {
+  return apiRequest<MacroIndicator[]>(`/api/v1/news/macro`);
+}
+
+export async function getStockNews(symbol: string): Promise<NewsItem[]> {
+  return apiRequest<NewsItem[]>(`/api/v1/news/stock/${encodeURIComponent(symbol)}`);
+}
+
+export async function getPortfolioNews(portfolioId: string): Promise<PortfolioNewsImpact> {
+  return apiRequest<PortfolioNewsImpact>(`/api/v1/news/portfolio/${portfolioId}`);
+}

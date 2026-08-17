@@ -10,8 +10,10 @@ import {
   getWatchlists,
   createTransaction,
   getPortfolios,
+  getStockNews,
   StockDetailResponse,
-  WatchlistResponse
+  WatchlistResponse,
+  NewsItem
 } from "@/lib/api";
 import {
   ArrowLeft,
@@ -22,6 +24,7 @@ import {
   Briefcase,
   Sparkles,
   RefreshCw,
+  Newspaper,
   X
 } from "lucide-react";
 import { DataPedigreeBadge } from "@/components/data-badge";
@@ -34,6 +37,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
 
   const [stock, setStock] = useState<StockDetailResponse | null>(null);
   const [watchlists, setWatchlists] = useState<WatchlistResponse[]>([]);
+  const [stockNews, setStockNews] = useState<NewsItem[]>([]);
   const [timeframe, setTimeframe] = useState<"1W" | "1M" | "3M" | "1Y" | "ALL">("1Y");
   const [showSMA, setShowSMA] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -54,13 +58,15 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     try {
       setLoading(true);
       setError(null);
-      const [detailRes, wlRes, portRes] = await Promise.all([
+      const [detailRes, wlRes, portRes, newsRes] = await Promise.all([
         getStockDetail(rawSymbol),
         getWatchlists().catch(() => []),
-        getPortfolios().catch(() => [])
+        getPortfolios().catch(() => []),
+        getStockNews(rawSymbol).catch(() => [])
       ]);
       setStock(detailRes);
       setWatchlists(wlRes);
+      setStockNews(newsRes);
       setUserPortfolios(portRes.map(p => ({ id: p.id, name: p.name })));
       if (portRes.length > 0) {
         setTradePortfolioId(portRes[0].id);
@@ -489,6 +495,51 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                   </Link>
                 </div>
               </div>
+
+              {/* Row 4: Company Related News & Sentiment Wire */}
+              {stockNews.length > 0 && (
+                <div className="p-6 rounded-3xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Newspaper size={18} className="text-blue-400" />
+                      <h3 className="text-base font-bold text-white">
+                        Headlines & Sentiment Wire: {stock.company_name}
+                      </h3>
+                    </div>
+                    <Link href="/news" className="text-xs text-blue-400 hover:underline">
+                      Explore Full Market Wire ➔
+                    </Link>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {stockNews.map((n) => (
+                      <div
+                        key={n.id}
+                        className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/60 text-xs space-y-2 hover:border-slate-700 transition-all"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-400 font-semibold">{n.source} • {n.time_ago}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            n.sentiment === "BULLISH"
+                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                              : n.sentiment === "BEARISH"
+                              ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                              : "bg-slate-500/10 text-slate-400 border-slate-500/20"
+                          }`}>
+                            {n.sentiment}
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-slate-200 text-xs leading-snug">{n.headline}</h4>
+                        <p className="text-[11px] text-slate-400 leading-relaxed">{n.summary}</p>
+                        <div className="p-2.5 rounded-xl bg-blue-950/20 border border-blue-500/20 text-[10px] text-blue-300 font-medium">
+                          <span className="font-bold">✦ AI Takeaway: </span>
+                          {n.ai_takeaway}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Trade Modal */}
               {showTradeModal && (
