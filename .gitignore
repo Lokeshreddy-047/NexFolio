@@ -61,6 +61,12 @@ ai-service/ml/reports/
 !ai-service/ml/models/random_forest_risk_model.pkl
 
 # =========================
+# Production Reference Market Data
+# =========================
+!ai-service/app/data/
+!ai-service/app/data/*.json
+
+# =========================
 # Python cache inside ai-service
 # =========================
 ai-service/**/__pycache__/
