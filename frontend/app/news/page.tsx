@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
+import { MotionContainer } from "@/components/ui/motion";
 import {
   Newspaper,
   TrendingUp,
@@ -166,7 +167,7 @@ export default function MarketNewsPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+    <div className="flex min-h-screen bg-[#030712] text-slate-100 font-sans antialiased">
       <Sidebar />
       <div className="flex flex-col flex-1 min-w-0">
         <Header
@@ -177,8 +178,9 @@ export default function MarketNewsPage() {
         />
 
         <main className="flex-1 p-4 lg:p-8 space-y-6 max-w-[1600px] w-full mx-auto">
+          <MotionContainer className="space-y-6">
           {/* Header Sub-Section */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
                 <Newspaper size={13} />
@@ -196,7 +198,7 @@ export default function MarketNewsPage() {
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:border-slate-700 shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:bg-white/[0.08] shadow-sm transition-all active:scale-95 disabled:opacity-50"
               >
                 <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
                 Refresh Feed
@@ -455,6 +457,7 @@ export default function MarketNewsPage() {
           })}
         </div>
       )}
+          </MotionContainer>
         </main>
       </div>
     </div>

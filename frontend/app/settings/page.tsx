@@ -6,6 +6,7 @@ import { Header } from "@/components/header";
 import { useAuth } from "@/components/auth-provider";
 import { useTheme } from "@/components/theme-provider";
 import { updateProfile } from "firebase/auth";
+import { MotionContainer } from "@/components/ui/motion";
 import {
   Settings,
   User,
@@ -106,7 +107,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+    <div className="flex min-h-screen bg-[#030712] text-slate-100 font-sans antialiased">
       <Sidebar />
 
       <div className="flex flex-col flex-1 min-w-0">
@@ -116,6 +117,7 @@ export default function SettingsPage() {
         />
 
         <main className="flex-1 p-4 lg:p-8 space-y-6 max-w-[1600px] w-full mx-auto">
+          <MotionContainer className="space-y-6">
           {/* Top Hero Banner */}
           <div className="p-6 rounded-3xl bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-slate-950/80 border border-slate-800/80 backdrop-blur-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-center gap-4 relative z-10">
@@ -605,6 +607,7 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+          </MotionContainer>
         </main>
       </div>
     </div>

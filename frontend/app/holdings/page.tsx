@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
+import { MotionContainer } from "@/components/ui/motion";
 import {
   getPortfolios,
   getHoldings,
@@ -280,7 +281,7 @@ export default function HoldingsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+    <div className="flex min-h-screen bg-[#030712] text-slate-100 font-sans antialiased">
       <Sidebar />
 
       <div className="flex flex-col flex-1 min-w-0">
@@ -292,6 +293,7 @@ export default function HoldingsPage() {
         />
 
         <main className="flex-1 p-4 lg:p-8 space-y-6 max-w-[1600px] w-full mx-auto">
+          <MotionContainer className="space-y-6">
           {/* Header Controls & Live Pedigree Badge */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -546,6 +548,7 @@ export default function HoldingsPage() {
               </div>
             )}
           </div>
+          </MotionContainer>
         </main>
       </div>
 

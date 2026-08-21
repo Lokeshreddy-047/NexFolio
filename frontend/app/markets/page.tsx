@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
+import { MotionContainer } from "@/components/ui/motion";
 import {
   getMarketOverview,
   getMarketStocks,
@@ -134,13 +135,14 @@ export default function MarketsPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+    <div className="flex min-h-screen bg-[#030712] text-slate-100 font-sans antialiased">
       <Sidebar />
 
       <div className="flex flex-col flex-1 min-w-0">
         <Header title="Market Intelligence" />
 
         <main className="flex-1 p-4 lg:p-8 space-y-6 max-w-[1600px] w-full mx-auto">
+          <MotionContainer className="space-y-6">
           {error && (
             <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
               {error}
@@ -544,6 +546,7 @@ export default function MarketsPage() {
               </table>
             </div>
           </div>
+          </MotionContainer>
         </main>
       </div>
     </div>

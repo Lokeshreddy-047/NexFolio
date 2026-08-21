@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
+import { MotionContainer } from "@/components/ui/motion";
 import {
   getPortfolios,
   getPortfolioReport,
@@ -35,9 +36,13 @@ import {
   Info,
   Building2,
   PiggyBank,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Calendar,
+  AlertTriangle,
+  Zap,
+  CheckCircle2,
+  X
 } from "lucide-react";
-import { DataPedigreeBadge } from "@/components/data-badge";
 import { useToast } from "@/components/toast-provider";
 
 export default function ReportsPage() {
@@ -58,6 +63,8 @@ export default function ReportsPage() {
   const [taxLoading, setTaxLoading] = useState(false);
   const [selectedTaxYear, setSelectedTaxYear] = useState<string>("Tax Year 2026-27");
   const [simulatedHarvestSymbols, setSimulatedHarvestSymbols] = useState<Set<string>>(new Set());
+  const [showHarvestModal, setShowHarvestModal] = useState<boolean>(false);
+  const [harvestExecuting, setHarvestExecuting] = useState<boolean>(false);
 
   // 1. Initial Load: Portfolios
   const loadPortfolios = useCallback(async () => {
@@ -183,6 +190,7 @@ export default function ReportsPage() {
   const handleDownloadCSV = async () => {
     if (!selectedPortfolioId) return;
     try {
+      toast.info("Generating ITR Export", "Connecting to tax audit engine...");
       const csvStr = await getPortfolioTaxReportCSV(selectedPortfolioId, selectedTaxYear);
       const blob = new Blob([csvStr], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
@@ -193,13 +201,63 @@ export default function ReportsPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success("ITR Schedule Exported", "CSV downloaded for tax filing.");
+      toast.success("ITR Schedule Exported", "CSV downloaded for tax filing (Schedule CG & CFL).");
     } catch (err: unknown) {
       toast.error("Export Error", err instanceof Error ? err.message : "Failed to download tax CSV export.");
     }
   };
 
-  // 8. Toggle Harvest Simulation Candidate
+  // 8. Download Harvest Plan CSV
+  const handleDownloadHarvestCSV = () => {
+    if (!taxReport || !taxReport.loss_harvesting.candidates.length) return;
+    const selectedCandidates = taxReport.loss_harvesting.candidates.filter(c => simulatedHarvestSymbols.has(c.symbol));
+    if (!selectedCandidates.length) {
+      toast.warning("No Candidates Selected", "Select at least one loss position to export harvest plan.");
+      return;
+    }
+
+    const headers = [
+      "Symbol",
+      "Company Name",
+      "Sector",
+      "Quantity to Harvest",
+      "Average Buy Price (INR)",
+      "Live Price (INR)",
+      "Harvestable Capital Loss (INR)",
+      "Loss Classification",
+      "Holding Months",
+      "Estimated Tax Saving (INR)",
+      "Action / Reinvestment Suggestion"
+    ];
+
+    const rows = selectedCandidates.map(c => [
+      c.symbol,
+      `"${c.company_name.replace(/"/g, '""')}"`,
+      c.sector,
+      c.quantity,
+      c.avg_buy_price.toFixed(2),
+      c.current_price.toFixed(2),
+      c.harvestable_loss.toFixed(2),
+      c.loss_classification,
+      c.holding_period_months,
+      c.estimated_incremental_tax_saving.toFixed(2),
+      `"${c.recommendation_rationale.replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `NexFolio_Tax_Harvest_Plan_${selectedPortfolioId}_${selectedTaxYear.replace(/\s+/g, "_")}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Harvest Plan Exported", "Downloaded CSV action plan.");
+  };
+
+  // 9. Toggle Harvest Simulation Candidate
   const toggleHarvestCandidate = (symbol: string) => {
     setSimulatedHarvestSymbols(prev => {
       const next = new Set(prev);
@@ -212,6 +270,18 @@ export default function ReportsPage() {
     });
   };
 
+  const handleSelectAllHarvest = () => {
+    if (!taxReport) return;
+    const allSyms = new Set(taxReport.loss_harvesting.candidates.map(c => c.symbol));
+    setSimulatedHarvestSymbols(allSyms);
+    toast.info("Selected All", "All loss positions included in harvest simulation.");
+  };
+
+  const handleClearAllHarvest = () => {
+    setSimulatedHarvestSymbols(new Set());
+    toast.info("Cleared Selection", "No loss positions selected.");
+  };
+
   // Reactive simulation math
   const simulatedReduction = useMemo(() => {
     if (!taxReport) return 0;
@@ -220,14 +290,71 @@ export default function ReportsPage() {
       .reduce((acc, c) => acc + c.estimated_incremental_tax_saving, 0);
   }, [taxReport, simulatedHarvestSymbols]);
 
+  const simulatedTotalHarvestLoss = useMemo(() => {
+    if (!taxReport) return 0;
+    return taxReport.loss_harvesting.candidates
+      .filter(c => simulatedHarvestSymbols.has(c.symbol))
+      .reduce((acc, c) => acc + c.harvestable_loss, 0);
+  }, [taxReport, simulatedHarvestSymbols]);
+
+  const simulatedCapitalReleased = useMemo(() => {
+    if (!taxReport) return 0;
+    return taxReport.loss_harvesting.candidates
+      .filter(c => simulatedHarvestSymbols.has(c.symbol))
+      .reduce((acc, c) => acc + (c.quantity * c.current_price), 0);
+  }, [taxReport, simulatedHarvestSymbols]);
+
   const simulatedPostHarvestTax = useMemo(() => {
     if (!taxReport) return 0;
     const baseTax = taxReport.capital_gains.total_estimated_tax_liability;
     return Math.max(0, baseTax - simulatedReduction);
   }, [taxReport, simulatedReduction]);
 
+  // Advance Tax Installment Schedule (Section 208/234C)
+  const advanceTaxSchedule = useMemo(() => {
+    const totalTax = simulatedPostHarvestTax;
+    return [
+      {
+        quarter: "Q1",
+        label: "First Installment",
+        dueDate: "15-Jun-2025",
+        percentage: 15,
+        cumulativeAmount: totalTax * 0.15,
+        installmentAmount: totalTax * 0.15,
+        isPast: true,
+      },
+      {
+        quarter: "Q2",
+        label: "Second Installment",
+        dueDate: "15-Sep-2025",
+        percentage: 45,
+        cumulativeAmount: totalTax * 0.45,
+        installmentAmount: totalTax * 0.30,
+        isPast: true,
+      },
+      {
+        quarter: "Q3",
+        label: "Third Installment",
+        dueDate: "15-Dec-2025",
+        percentage: 75,
+        cumulativeAmount: totalTax * 0.75,
+        installmentAmount: totalTax * 0.30,
+        isPast: false,
+      },
+      {
+        quarter: "Q4",
+        label: "Fourth Installment",
+        dueDate: "15-Mar-2026",
+        percentage: 100,
+        cumulativeAmount: totalTax * 1.00,
+        installmentAmount: totalTax * 0.25,
+        isPast: false,
+      },
+    ];
+  }, [simulatedPostHarvestTax]);
+
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+    <div className="flex min-h-screen bg-[#030712] text-slate-100 font-sans antialiased">
       {/* Sidebar hidden during print */}
       <div className="print:hidden">
         <Sidebar />
@@ -240,6 +367,7 @@ export default function ReportsPage() {
         </div>
 
         <main className="flex-1 p-4 lg:p-8 space-y-6 max-w-[1400px] w-full mx-auto">
+          <MotionContainer className="space-y-6">
           {error && (
             <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center justify-between">
               <span>{error}</span>
@@ -568,40 +696,80 @@ export default function ReportsPage() {
           {activeTab === "TAX_HARVESTING" && (
             <div className="space-y-6 animate-fadeIn">
               {/* Statutory Tax Regime Context Banner */}
-              <div className="p-6 rounded-3xl bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-slate-950/80 border border-slate-800/80 backdrop-blur-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="p-6 rounded-3xl bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-slate-950/90 border border-slate-800/80 backdrop-blur-xl relative overflow-hidden flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div className="flex items-center gap-4 relative z-10">
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-teal-500/20 via-emerald-500/20 to-indigo-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400 shadow-xl shadow-teal-950/40 shrink-0">
                     <Receipt size={28} />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex flex-wrap items-center gap-2.5">
                       <h1 className="text-xl font-black text-white tracking-tight">
-                        Tax Optimization Command Center
+                        Tax Intelligence & Optimization Engine
                       </h1>
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-teal-500/10 text-teal-300 border border-teal-500/20">
                         {taxReport?.rule_set.law || "Income-tax Act, 2025"}
                       </span>
                     </div>
                     <p className="text-xs text-slate-400 mt-1">
-                      {taxReport?.rule_set.tax_year || selectedTaxYear} · Calendar-month FIFO matching: STCG @ 20% (&le;12 mos), Section 112A LTCG @ 12.5% (&gt;12 mos), 4% Cess modeled separately.
+                      {taxReport?.rule_set.tax_year || selectedTaxYear} · STCG @ 20% (&le;12 mos) · Section 112A LTCG @ 12.5% (&gt;12 mos) above ₹1.25L exemption · 4% Health &amp; Education Cess
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 relative z-10">
-                  <DataPedigreeBadge badge="LIVE" />
-                  <span className="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono text-emerald-300">
-                    {taxReport?.rule_set.tax_year || selectedTaxYear}
-                  </span>
+                {/* Statutory Tax Period & Multi-Export Toolbar */}
+                <div className="flex flex-wrap items-center gap-2.5 relative z-10">
+                  <button
+                    onClick={handleDownloadCSV}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30 transition-all shadow-sm"
+                    title="Export ITR-2 / ITR-3 Schedule CG & CFL CSV"
+                  >
+                    <FileSpreadsheet size={14} />
+                    <span>ITR CSV</span>
+                  </button>
+
+                  <button
+                    onClick={handleDownloadHarvestCSV}
+                    disabled={!taxReport?.loss_harvesting.candidates.length}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 text-xs font-bold border border-teal-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Export Tax Loss Harvesting Action Plan CSV"
+                  >
+                    <Scissors size={14} />
+                    <span>Harvest Plan CSV</span>
+                  </button>
+
+                  <button
+                    onClick={handleDownloadJSON}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 transition-all"
+                    title="Download Complete Tax Audit Dossier (JSON)"
+                  >
+                    <Download size={14} />
+                    <span>JSON Dossier</span>
+                  </button>
+
+                  <button
+                    onClick={handlePrint}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 transition-all"
+                    title="Print Formal Statutory Tax Filing Statement"
+                  >
+                    <Printer size={14} />
+                    <span>Print</span>
+                  </button>
                 </div>
               </div>
+
+              {taxLoading && !taxReport && (
+                <div className="p-12 text-center text-xs text-slate-400">
+                  <RefreshCw size={24} className="animate-spin mx-auto text-teal-400 mb-2" />
+                  Calculating FIFO trade matching and statutory tax schedules...
+                </div>
+              )}
 
               {taxReport && (
                 <>
                   {/* Top 4 Core Tax Intelligence Cards */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* STCG Card */}
-                    <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 shadow-sm space-y-2">
+                    <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 shadow-sm space-y-2 hover:border-indigo-500/30 transition-colors">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                           Section 111A (STCG)
@@ -610,20 +778,20 @@ export default function ReportsPage() {
                           Tax @ 20%
                         </span>
                       </div>
-                      <p className={`text-2xl font-black mt-1 ${taxReport.capital_gains.net_stcg >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                      <p className={`text-2xl font-black mt-1 font-mono ${taxReport.capital_gains.net_stcg >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                         ₹{taxReport.capital_gains.net_stcg.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                       </p>
                       <div className="text-[11px] text-slate-400 flex justify-between pt-1 border-t border-slate-800/60">
                         <span>Gross: ₹{taxReport.capital_gains.gross_stcg.toLocaleString("en-IN")}</span>
                         <span>Set-off: ₹{taxReport.capital_gains.stcl_setoff_against_stcg.toLocaleString("en-IN")}</span>
                       </div>
-                      <p className="text-xs font-bold text-indigo-300 pt-1">
+                      <p className="text-xs font-bold text-indigo-300 pt-1 font-mono">
                         Base STCG Tax: ₹{taxReport.capital_gains.estimated_stcg_base_tax.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                       </p>
                     </div>
 
                     {/* Section 112A LTCG Tracker Card */}
-                    <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 shadow-sm space-y-2">
+                    <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 shadow-sm space-y-2 hover:border-teal-500/30 transition-colors">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                           Section 112A (LTCG)
@@ -632,45 +800,52 @@ export default function ReportsPage() {
                           Tax @ 12.5%
                         </span>
                       </div>
-                      <p className="text-2xl font-black text-emerald-400 mt-1">
+                      <p className="text-2xl font-black text-emerald-400 mt-1 font-mono">
                         ₹{taxReport.capital_gains.section_112a.net_112a_ltcg_before_exemption.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                       </p>
                       <div className="text-[11px] text-slate-400 flex justify-between pt-1 border-t border-slate-800/60">
-                        <span>₹1.25L Exemption Consumed:</span>
-                        <span className="font-mono text-emerald-400">₹{taxReport.capital_gains.section_112a.threshold_consumed.toLocaleString("en-IN")}/₹1.25L</span>
+                        <span>₹1.25L Exemption Used:</span>
+                        <span className="font-mono text-emerald-400">
+                          ₹{taxReport.capital_gains.section_112a.threshold_consumed.toLocaleString("en-IN")}/₹1.25L
+                        </span>
                       </div>
                       <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
                         <div
-                          className="bg-teal-400 h-full rounded-full"
+                          className="bg-teal-400 h-full rounded-full transition-all"
                           style={{
                             width: `${Math.min(100, (taxReport.capital_gains.section_112a.threshold_consumed / 125000) * 100)}%`
                           }}
                         />
                       </div>
-                      <p className="text-xs font-bold text-teal-300 pt-0.5">
+                      <p className="text-xs font-bold text-teal-300 pt-0.5 font-mono">
                         Taxable 112A: ₹{taxReport.capital_gains.section_112a.taxable_112a_ltcg.toLocaleString("en-IN")} (Tax: ₹{taxReport.capital_gains.section_112a.estimated_112a_base_tax.toLocaleString("en-IN")})
                       </p>
                     </div>
 
                     {/* Consolidated Estimated Tax Liability */}
-                    <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950 border border-slate-800/80 shadow-sm space-y-2">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                        Total Estimated Tax
-                      </span>
-                      <p className="text-2xl font-black text-amber-400 mt-1">
+                    <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950 border border-slate-800/80 shadow-sm space-y-2 hover:border-amber-500/30 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                          Total Tax Liability
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                          Incl. 4% Cess
+                        </span>
+                      </div>
+                      <p className="text-2xl font-black text-amber-400 mt-1 font-mono">
                         ₹{taxReport.capital_gains.total_estimated_tax_liability.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                       </p>
-                      <div className="text-[11px] text-slate-400 flex justify-between pt-1 border-t border-slate-800/60">
-                        <span>Base Tax: ₹{taxReport.capital_gains.total_base_tax.toLocaleString("en-IN")}</span>
+                      <div className="text-[11px] text-slate-400 flex justify-between pt-1 border-t border-slate-800/60 font-mono">
+                        <span>Base: ₹{taxReport.capital_gains.total_base_tax.toLocaleString("en-IN")}</span>
                         <span>4% Cess: ₹{taxReport.capital_gains.cess_amount.toLocaleString("en-IN")}</span>
                       </div>
                       <p className="text-[10px] text-slate-500 italic pt-0.5">
-                        Excludes personal surcharge thresholds.
+                        Excludes personal surcharge brackets.
                       </p>
                     </div>
 
                     {/* Available Tax Loss Bank */}
-                    <div className="p-5 rounded-2xl bg-indigo-950/20 border border-indigo-500/30 shadow-sm space-y-2">
+                    <div className="p-5 rounded-2xl bg-indigo-950/20 border border-indigo-500/30 shadow-sm space-y-2 hover:border-indigo-400 transition-colors">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold uppercase tracking-wider text-indigo-300 flex items-center gap-1.5">
                           <PiggyBank size={14} className="text-indigo-400" />
@@ -680,16 +855,120 @@ export default function ReportsPage() {
                           8-Yr Window
                         </span>
                       </div>
-                      <p className="text-2xl font-black text-indigo-300 mt-1">
+                      <p className="text-2xl font-black text-indigo-300 mt-1 font-mono">
                         ₹{taxReport.tax_loss_bank.total_banked_loss.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                       </p>
-                      <div className="text-[11px] text-slate-400 flex justify-between pt-1 border-t border-slate-800/60">
-                        <span>STCL Banked: ₹{taxReport.tax_loss_bank.total_available_stcl.toLocaleString("en-IN")}</span>
+                      <div className="text-[11px] text-slate-400 flex justify-between pt-1 border-t border-slate-800/60 font-mono">
+                        <span>STCL: ₹{taxReport.tax_loss_bank.total_available_stcl.toLocaleString("en-IN")}</span>
                         <span>LTCL: ₹{taxReport.tax_loss_bank.total_available_ltcl.toLocaleString("en-IN")}</span>
                       </div>
                       <p className="text-xs text-indigo-400/90 pt-0.5">
-                        Carried forward for future set-offs.
+                        Carried forward for future capital gain set-offs.
                       </p>
+                    </div>
+                  </div>
+
+                  {/* Section 112A Exemption Progress & Advance Tax Installment Calendar (Two Columns) */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Exemption & Set-Off Rule Inspector */}
+                    <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck size={18} className="text-teal-400" />
+                          <h2 className="text-sm font-bold text-white">
+                            Section 112A ₹1.25L Exemption &amp; Set-Off Matrix
+                          </h2>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
+                          Schedule CG / CFL
+                        </span>
+                      </div>
+
+                      {/* Exemption Progress */}
+                      <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-400">Statutory Tax-Free Headroom (₹1,25,000 / Year)</span>
+                          <span className="font-mono font-bold text-emerald-400">
+                            ₹{Math.max(0, 125000 - taxReport.capital_gains.section_112a.threshold_consumed).toLocaleString("en-IN")} Remaining
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                          <div
+                            className="bg-gradient-to-r from-teal-500 to-emerald-400 h-full rounded-full transition-all"
+                            style={{
+                              width: `${Math.min(100, (taxReport.capital_gains.section_112a.threshold_consumed / 125000) * 100)}%`
+                            }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                          <span>₹0 (Exempt)</span>
+                          <span>Consumed: ₹{taxReport.capital_gains.section_112a.threshold_consumed.toLocaleString("en-IN")}</span>
+                          <span>Cap: ₹1,25,000</span>
+                        </div>
+                      </div>
+
+                      {/* Statutory Set-Off Rules Grid */}
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div className="p-3 rounded-xl bg-slate-950/50 border border-slate-800/80 space-y-1">
+                          <span className="text-[10px] font-bold text-indigo-400 uppercase">STCL Set-Off Rules</span>
+                          <p className="text-[11px] text-slate-300">
+                            Short-term capital losses can be set off against <strong className="text-white">both STCG and LTCG</strong>.
+                          </p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-slate-950/50 border border-slate-800/80 space-y-1">
+                          <span className="text-[10px] font-bold text-teal-400 uppercase">LTCL Set-Off Rules</span>
+                          <p className="text-[11px] text-slate-300">
+                            Long-term capital losses can <strong className="text-white">only be set off against LTCG</strong>.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Advance Tax Compliance Calendar (Section 208/234C) */}
+                    <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Calendar size={18} className="text-amber-400" />
+                          <h2 className="text-sm font-bold text-white">
+                            Advance Tax Installment Schedule (Section 234C)
+                          </h2>
+                        </div>
+                        {simulatedPostHarvestTax > 10000 ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                            Advance Tax Applicable (&gt;₹10,000)
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                            Exempt (&le;₹10,000)
+                          </span>
+                        )}
+                      </div>
+
+                      {/* 4 Quarter Timeline */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        {advanceTaxSchedule.map((item) => (
+                          <div key={item.quarter} className="p-3 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-white">{item.quarter}</span>
+                              <span className="text-[10px] font-mono text-slate-400">{item.percentage}%</span>
+                            </div>
+                            <p className="text-[10px] text-slate-400">{item.dueDate}</p>
+                            <p className="text-sm font-black font-mono text-amber-300">
+                              ₹{Math.round(item.cumulativeAmount).toLocaleString("en-IN")}
+                            </p>
+                            <p className="text-[9px] text-slate-500 font-mono">
+                              Inst: ₹{Math.round(item.installmentAmount).toLocaleString("en-IN")}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {simulatedPostHarvestTax > 10000 && (
+                        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200/90 text-[11px] flex items-center gap-2">
+                          <AlertTriangle size={14} className="text-amber-400 shrink-0" />
+                          <span>Pay advance tax before 15 March to avoid Section 234B/234C penal interest of 1%/month.</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -730,28 +1009,65 @@ export default function ReportsPage() {
 
                   {/* Interactive Tax Loss Harvesting Action Center */}
                   <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md space-y-5">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                       <div>
-                        <h2 className="text-base font-bold text-white flex items-center gap-2">
+                        <div className="flex items-center gap-2">
                           <Scissors size={18} className="text-emerald-400" />
-                          Interactive Tax Loss Harvesting Simulator
-                        </h2>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          Toggle candidate positions below to simulate selling in loss and observe your incremental tax savings calculated against available gains.
+                          <h2 className="text-base font-bold text-white">
+                            Interactive Tax Loss Harvesting Simulator
+                          </h2>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 font-bold border border-emerald-500/20">
+                            {taxReport.loss_harvesting.candidates.length} Loss Candidates
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Select candidate positions below to simulate tax loss realization and calculate real-time savings against current taxable capital gains.
                         </p>
                       </div>
 
-                      {/* Live Reactive Simulation Bar */}
-                      <div className="flex items-center gap-3 p-2.5 px-4 rounded-2xl bg-slate-950/80 border border-slate-800 text-xs">
-                        <span className="text-slate-400">Simulated Tax Savings:</span>
-                        <span className="text-sm font-black font-mono text-emerald-400">
-                          -₹{simulatedReduction.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
-                        </span>
-                        <span className="text-slate-600">|</span>
-                        <span className="text-slate-400">Post-Harvest Net Tax:</span>
-                        <span className="text-sm font-black font-mono text-amber-400">
-                          ₹{simulatedPostHarvestTax.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
-                        </span>
+                      {/* Live Reactive Simulation Bar & Action Buttons */}
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-3 p-2.5 px-4 rounded-2xl bg-slate-950/80 border border-slate-800 text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-slate-400">Tax Saved:</span>
+                            <span className="font-black font-mono text-emerald-400">
+                              -₹{simulatedReduction.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <span className="text-slate-700">|</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-slate-400">Net Tax:</span>
+                            <span className="font-black font-mono text-amber-400">
+                              ₹{simulatedPostHarvestTax.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleSelectAllHarvest}
+                            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition-colors"
+                          >
+                            Select All
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleClearAllHarvest}
+                            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-400 transition-colors"
+                          >
+                            Clear
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowHarvestModal(true)}
+                            disabled={!simulatedHarvestSymbols.size}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Zap size={14} />
+                            <span>Execute Loss Harvest ({simulatedHarvestSymbols.size})</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -856,11 +1172,11 @@ export default function ReportsPage() {
 
                   {/* Realized Capital Gains & Buyback Ledger (Full Provenance) */}
                   <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md space-y-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
                         <h2 className="text-base font-bold text-white flex items-center gap-2">
                           <History size={18} className="text-indigo-400" />
-                          Realized Capital Gains & Buyback Ledger ({taxReport.realized_lots.length} Matched Lots)
+                          Realized Capital Gains &amp; Buyback Ledger ({taxReport.realized_lots.length} Matched Lots)
                         </h2>
                         <p className="text-xs text-slate-400 mt-0.5">
                           Lot-level audit records with buy/sell timestamps, calendar holding months, cost basis, and classification.
@@ -955,7 +1271,7 @@ export default function ReportsPage() {
                   <div className="p-4 px-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-200/90 text-xs flex items-start gap-3">
                     <Info size={18} className="text-amber-400 shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-bold text-amber-300">Statutory Tax & Reconciliation Note: </span>
+                      <span className="font-bold text-amber-300">Statutory Tax &amp; Reconciliation Note: </span>
                       {taxReport.disclaimer}
                     </div>
                   </div>
@@ -1010,8 +1326,136 @@ export default function ReportsPage() {
               )}
             </div>
           )}
+          </MotionContainer>
         </main>
       </div>
+
+      {/* Interactive Tax Loss Harvesting Execution Modal */}
+      {showHarvestModal && taxReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 space-y-6 shadow-2xl relative overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                  <Zap size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Execute Tax Loss Harvest Plan</h3>
+                  <p className="text-xs text-slate-400">
+                    Realize simulated capital losses to offset current gains and optimize advance tax.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowHarvestModal(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Metrics Strip */}
+            <div className="grid grid-cols-3 gap-3 p-4 rounded-2xl bg-slate-950/80 border border-slate-800 text-center font-mono">
+              <div>
+                <span className="text-[10px] text-slate-400 font-sans block">Capital Loss Realized</span>
+                <span className="text-sm font-bold text-rose-400">
+                  -₹{simulatedTotalHarvestLoss.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-400 font-sans block">Tax Savings Offset</span>
+                <span className="text-sm font-bold text-emerald-400">
+                  +₹{simulatedReduction.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-400 font-sans block">Capital Freed</span>
+                <span className="text-sm font-bold text-white">
+                  ₹{simulatedCapitalReleased.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+
+            {/* Candidate Orders List */}
+            <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+                Trade Orders ({simulatedHarvestSymbols.size} Positions)
+              </span>
+              {taxReport.loss_harvesting.candidates
+                .filter(c => simulatedHarvestSymbols.has(c.symbol))
+                .map(c => (
+                  <div key={c.symbol} className="p-3 rounded-xl bg-slate-950/50 border border-slate-800/80 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white">{c.symbol}</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">
+                          SELL {c.quantity} Qty
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        LTP: ₹{c.current_price.toFixed(2)} · Loss: -₹{c.harvestable_loss.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-mono font-bold text-emerald-400">
+                        +₹{c.estimated_incremental_tax_saving.toFixed(2)} Tax Saved
+                      </span>
+                      <p className="text-[10px] text-slate-500">
+                        Action: {c.recommendation_rationale}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            {/* Statutory Compliance Note */}
+            <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-200/90 text-xs flex items-start gap-2">
+              <Info size={16} className="text-indigo-400 shrink-0 mt-0.5" />
+              <span>
+                <strong>Wash-Sale Best Practice:</strong> To preserve market exposure, reinvest freed capital into sector ETFs or correlated peers rather than buying back identical shares within 30 days.
+              </span>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowHarvestModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setHarvestExecuting(true);
+                  setTimeout(() => {
+                    setHarvestExecuting(false);
+                    setShowHarvestModal(false);
+                    handleDownloadHarvestCSV();
+                    toast.success("Loss Harvest Executed", `Simulated orders exported. Estimated tax liability reduced to ₹${simulatedPostHarvestTax.toLocaleString("en-IN")}.`);
+                  }, 800);
+                }}
+                disabled={harvestExecuting}
+                className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all"
+              >
+                {harvestExecuting ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span>Executing Orders...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={14} />
+                    <span>Confirm &amp; Export Harvest Orders</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

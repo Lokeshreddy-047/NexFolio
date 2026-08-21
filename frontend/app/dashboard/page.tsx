@@ -21,6 +21,10 @@ import { Header } from "@/components/header";
 import { DataPedigreeBadge } from "@/components/data-badge";
 import { useMarketFeed } from "@/lib/useMarketFeed";
 import {
+  MotionContainer,
+  MotionCard
+} from "@/components/ui/motion";
+import {
   getPortfolios,
   getCommandCenter,
   getPerformanceTimeline,
@@ -274,7 +278,7 @@ export default function DashboardPage() {
   const recentActivity = overview?.recent_activity || [];
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+    <div className="flex min-h-screen bg-[#030712] text-slate-100 font-sans antialiased">
       <Sidebar />
 
       <div className="flex flex-col flex-1 min-w-0">
@@ -283,11 +287,11 @@ export default function DashboardPage() {
         <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto w-full space-y-6">
           {/* Error Banner */}
           {error && (
-            <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center justify-between">
+            <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center justify-between shadow-lg shadow-rose-950/20">
               <span>{error}</span>
               <button
                 onClick={() => loadCommandCenterData(activePortfolioId)}
-                className="px-3 py-1 bg-rose-500/20 rounded-lg text-xs font-semibold hover:bg-rose-500/30"
+                className="px-3 py-1 bg-rose-500/20 rounded-xl text-xs font-semibold hover:bg-rose-500/30 transition-colors"
               >
                 Retry
               </button>
@@ -296,7 +300,7 @@ export default function DashboardPage() {
 
           {/* Sector Concentration Warning Alert Banner */}
           {concentration?.sector_concentration_warning && (
-            <div className="p-3.5 px-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm flex items-center gap-3 shadow-lg shadow-amber-500/5">
+            <div className="p-3.5 px-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm flex items-center gap-3 shadow-lg shadow-amber-500/5 backdrop-blur-md">
               <span className="text-xl">⚠️</span>
               <div className="flex-1">
                 <span className="font-semibold text-amber-300">Sector Concentration Warning: </span>
@@ -306,96 +310,99 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* 1. REAL-TIME PORTFOLIO PULSE (Hero KPI Area) */}
-          <section className="bg-gradient-to-br from-slate-900/90 via-slate-900/60 to-slate-950/80 border border-slate-800/80 rounded-3xl p-6 backdrop-blur-xl shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+          <MotionContainer className="space-y-6">
+            {/* 1. REAL-TIME PORTFOLIO PULSE (Hero KPI Area) */}
+            <MotionCard className="cyber-card cyber-card-mint p-6 sm:p-8 backdrop-blur-2xl relative overflow-hidden">
+              <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
+              <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-              {/* Left: Net Worth & Active Portfolio Name */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
-                    Command Center Pulse
-                  </span>
-                  <DataPedigreeBadge badge={pulse?.data_badge || activeBadge} />
-                  {connectionStatus === "connected" && (
-                    <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      LIVE FEED ACTIVE
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+                {/* Left: Net Worth & Active Portfolio Name */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[11px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full shadow-[0_0_15px_rgba(16,231,157,0.2)] flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      INSTITUTIONAL COCKPIT
                     </span>
-                  )}
+                    <DataPedigreeBadge badge={pulse?.data_badge || activeBadge} />
+                    {connectionStatus === "connected" && (
+                      <span className="text-[10px] text-cyan-400 font-mono font-bold flex items-center gap-1.5 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-0.5 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                        5ms STREAM ACTIVE
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-baseline gap-4">
+                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300">
+                      {formatINR(pulse?.total_value || 0)}
+                    </h1>
+
+                    {/* Day P&L Badge */}
+                    <div
+                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-sm font-black border shadow-lg ${
+                        (pulse?.day_pnl || 0) >= 0
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-emerald-500/10"
+                          : "bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-rose-500/10"
+                      }`}
+                    >
+                      <span className="text-xs">{(pulse?.day_pnl || 0) >= 0 ? "▲" : "▼"}</span>
+                      <span className="font-mono">{formatINR(Math.abs(pulse?.day_pnl || 0))}</span>
+                      <span className="text-xs font-semibold opacity-90 font-mono">
+                        ({(pulse?.day_pnl_pct || 0) >= 0 ? "+" : ""}
+                        {pulse?.day_pnl_pct?.toFixed(2)}% today)
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-400 flex items-center gap-2">
+                    Active Portfolio: <strong className="text-slate-100 font-bold bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.08]">{overview?.portfolio.name}</strong> • {pulse?.holdings_count || 0} Open Positions
+                  </p>
                 </div>
 
-                <div className="flex flex-wrap items-baseline gap-4">
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white">
-                    {formatINR(pulse?.total_value || 0)}
-                  </h1>
+                {/* Right: Secondary KPI Grid & Snapshot Checkpoint Button */}
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-black/50 p-4 rounded-2xl border border-white/[0.08] backdrop-blur-xl">
+                    <div className="px-3">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Invested Capital</div>
+                      <div className="text-base font-black text-slate-200 mt-1 font-mono">{formatINR(pulse?.invested_capital || 0)}</div>
+                    </div>
+                    <div className="px-3 border-l border-white/[0.08]">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Overall ROI</div>
+                      <div className={`text-base font-black mt-1 font-mono ${(pulse?.total_pnl || 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {(pulse?.total_roi_pct || 0) >= 0 ? "+" : ""}
+                        {pulse?.total_roi_pct?.toFixed(2)}%
+                      </div>
+                    </div>
+                    <div className="px-3 border-l border-white/[0.08] col-span-2 sm:col-span-1">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total P&L</div>
+                      <div className={`text-base font-black mt-1 font-mono ${(pulse?.total_pnl || 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {formatINR(pulse?.total_pnl || 0)}
+                      </div>
+                    </div>
+                  </div>
 
-                  {/* Day P&L Badge */}
-                  <div
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold border ${
-                      (pulse?.day_pnl || 0) >= 0
-                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                        : "bg-rose-500/10 border-rose-500/20 text-rose-400"
-                    }`}
+                  {/* On-demand snapshot button */}
+                  <button
+                    onClick={handleTakeSnapshot}
+                    disabled={takingSnapshot}
+                    className="px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 text-emerald-300 text-xs font-bold border border-emerald-500/30 transition-all flex items-center gap-2 shadow-lg shadow-emerald-950/40 disabled:opacity-50 active:scale-95"
+                    title="Records an authentic valuation snapshot checkpoint in MongoDB"
                   >
-                    <span>{(pulse?.day_pnl || 0) >= 0 ? "▲" : "▼"}</span>
-                    <span>{formatINR(Math.abs(pulse?.day_pnl || 0))}</span>
-                    <span className="text-xs font-medium opacity-80">
-                      ({(pulse?.day_pnl_pct || 0) >= 0 ? "+" : ""}
-                      {pulse?.day_pnl_pct?.toFixed(2)}% today)
-                    </span>
-                  </div>
+                    <span>{takingSnapshot ? "Recording..." : snapshotSuccess ? "✓ Checkpoint Saved" : "📸 Checkpoint Snapshot"}</span>
+                  </button>
                 </div>
-
-                <p className="text-xs text-slate-400">
-                  Active Portfolio: <strong className="text-slate-200">{overview?.portfolio.name}</strong> • {pulse?.holdings_count || 0} Open Positions
-                </p>
               </div>
-
-              {/* Right: Secondary KPI Grid & Snapshot Checkpoint Button */}
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800/80">
-                  <div className="px-3">
-                    <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Invested Capital</div>
-                    <div className="text-base font-bold text-slate-200 mt-0.5">{formatINR(pulse?.invested_capital || 0)}</div>
-                  </div>
-                  <div className="px-3 border-l border-slate-800">
-                    <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Overall Return</div>
-                    <div className={`text-base font-bold mt-0.5 ${(pulse?.total_pnl || 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                      {(pulse?.total_roi_pct || 0) >= 0 ? "+" : ""}
-                      {pulse?.total_roi_pct?.toFixed(2)}%
-                    </div>
-                  </div>
-                  <div className="px-3 border-l border-slate-800 col-span-2 sm:col-span-1">
-                    <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Total Profit / Loss</div>
-                    <div className={`text-base font-bold mt-0.5 ${(pulse?.total_pnl || 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                      {formatINR(pulse?.total_pnl || 0)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* On-demand snapshot button */}
-                <button
-                  onClick={handleTakeSnapshot}
-                  disabled={takingSnapshot}
-                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all flex items-center gap-2 hover:shadow-lg disabled:opacity-50"
-                  title="Records an authentic valuation snapshot checkpoint in MongoDB"
-                >
-                  <span>{takingSnapshot ? "Recording..." : snapshotSuccess ? "✓ Snapshot Saved" : "📸 Snapshot Checkpoint"}</span>
-                </button>
-              </div>
-            </div>
-          </section>
+            </MotionCard>
 
           {/* 2. PERFORMANCE TIMELINE & BENCHMARK CHART */}
-          <section className="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 backdrop-blur-md shadow-xl space-y-4">
+          <section className="cyber-card cyber-card-iris p-6 sm:p-7 backdrop-blur-2xl space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                  <span>📈</span> Portfolio Performance Trajectory
+                <h2 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+                  <span className="text-emerald-400">📈</span> Portfolio Performance Trajectory
                 </h2>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-400 mt-0.5">
                   Authentic historical valuation timeline with NIFTY 50 comparative benchmark.
                 </p>
               </div>
@@ -403,11 +410,11 @@ export default function DashboardPage() {
               {/* Chart Controls */}
               <div className="flex flex-wrap items-center gap-3">
                 {/* Metric Mode Switcher */}
-                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
+                <div className="flex bg-black/60 p-1 rounded-xl border border-white/[0.08] text-xs font-bold">
                   <button
                     onClick={() => setTimelineMetric("VALUE")}
                     className={`px-3 py-1.5 rounded-lg transition-all ${
-                      timelineMetric === "VALUE" ? "bg-emerald-500 text-slate-950 shadow" : "text-slate-400 hover:text-slate-200"
+                      timelineMetric === "VALUE" ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20" : "text-slate-400 hover:text-slate-200"
                     }`}
                   >
                     ₹ Valuation
@@ -415,7 +422,7 @@ export default function DashboardPage() {
                   <button
                     onClick={() => setTimelineMetric("RETURN")}
                     className={`px-3 py-1.5 rounded-lg transition-all ${
-                      timelineMetric === "RETURN" ? "bg-emerald-500 text-slate-950 shadow" : "text-slate-400 hover:text-slate-200"
+                      timelineMetric === "RETURN" ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20" : "text-slate-400 hover:text-slate-200"
                     }`}
                   >
                     % Return
@@ -423,7 +430,7 @@ export default function DashboardPage() {
                   <button
                     onClick={() => setTimelineMetric("PNL")}
                     className={`px-3 py-1.5 rounded-lg transition-all ${
-                      timelineMetric === "PNL" ? "bg-emerald-500 text-slate-950 shadow" : "text-slate-400 hover:text-slate-200"
+                      timelineMetric === "PNL" ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20" : "text-slate-400 hover:text-slate-200"
                     }`}
                   >
                     ₹ P&L
@@ -431,7 +438,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Benchmark Toggle Checkbox */}
-                <label className="flex items-center gap-2 text-xs font-medium text-slate-300 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800 cursor-pointer select-none">
+                <label className="flex items-center gap-2 text-xs font-semibold text-slate-300 bg-black/60 px-3 py-1.5 rounded-xl border border-white/[0.08] cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={compareBenchmark}
@@ -442,7 +449,7 @@ export default function DashboardPage() {
                 </label>
 
                 {/* Range Filters */}
-                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
+                <div className="flex bg-black/60 p-1 rounded-xl border border-white/[0.08] text-xs font-bold">
                   {["1W", "1M", "3M", "1Y", "ALL"].map((range) => (
                     <button
                       key={range}
@@ -580,35 +587,40 @@ export default function DashboardPage() {
           {/* 3. BENTO GRID: TOP MOVERS, CONCENTRATION & HEALTH */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Top Movers Widget */}
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-5 backdrop-blur-md shadow-xl flex flex-col justify-between">
+            <div className="cyber-card cyber-card-mint p-5 sm:p-6 backdrop-blur-2xl flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <span>🚀</span> Top Movers Today
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-black text-white flex items-center gap-2">
+                    <span className="text-emerald-400">🚀</span> Top Movers Today
                   </h3>
-                  <span className="text-[11px] text-slate-500">Day Contribution</span>
+                  <span className="text-[10px] font-mono uppercase font-bold tracking-wider text-slate-500 bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.06]">
+                    Real-time
+                  </span>
                 </div>
 
                 <div className="space-y-2.5">
                   {movers?.gainers && movers.gainers.length > 0 ? (
                     movers.gainers.slice(0, 3).map((g) => {
                       const flash = flashStates[g.symbol] || flashStates[`${g.symbol}.NS`];
-                      const flashClass = flash === "up" ? "bg-emerald-500/20" : flash === "down" ? "bg-rose-500/20" : "";
+                      const flashClass = flash === "up" ? "bg-emerald-500/20 shadow-[0_0_15px_rgba(16,231,157,0.3)]" : flash === "down" ? "bg-rose-500/20" : "";
                       const liveTick = ticks[g.symbol] || ticks[`${g.symbol}.NS`];
                       const dayPct = liveTick ? liveTick.day_change_pct : g.day_change_pct;
                       return (
                         <div
                           key={g.symbol}
                           onClick={() => setSelectedSector(g.sector)}
-                          className={`flex items-center justify-between p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/60 hover:border-emerald-500/40 cursor-pointer transition-all duration-500 text-xs ${flashClass}`}
+                          className={`flex items-center justify-between p-3 rounded-xl bg-black/40 border border-white/[0.06] hover:border-emerald-500/40 hover:bg-white/[0.04] cursor-pointer transition-all duration-300 text-xs ${flashClass}`}
                         >
                           <div>
-                            <div className="font-bold text-slate-200">{g.symbol}</div>
+                            <div className="font-bold text-slate-100 flex items-center gap-1.5">
+                              {g.symbol}
+                              <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1 rounded">NSE</span>
+                            </div>
                             <div className="text-[10px] text-slate-400 truncate max-w-[120px]">{g.company_name}</div>
                           </div>
                           <div className="text-right">
-                            <div className="font-bold text-emerald-400">+{dayPct.toFixed(2)}%</div>
-                            <div className="text-[10px] text-slate-400">{formatINR(g.day_pnl_contribution)}</div>
+                            <div className="font-black text-emerald-400 font-mono">+{dayPct.toFixed(2)}%</div>
+                            <div className="text-[10px] text-slate-400 font-mono">{formatINR(g.day_pnl_contribution)}</div>
                           </div>
                         </div>
                       );
@@ -618,25 +630,25 @@ export default function DashboardPage() {
                   )}
 
                   {movers?.losers && movers.losers.length > 0 && (
-                    <div className="pt-2 border-t border-slate-800/60">
+                    <div className="pt-2 border-t border-white/[0.06]">
                       {movers.losers.slice(0, 2).map((l) => {
                         const flash = flashStates[l.symbol] || flashStates[`${l.symbol}.NS`];
-                        const flashClass = flash === "up" ? "bg-emerald-500/20" : flash === "down" ? "bg-rose-500/20" : "";
+                        const flashClass = flash === "up" ? "bg-emerald-500/20" : flash === "down" ? "bg-rose-500/20 shadow-[0_0_15px_rgba(255,59,105,0.3)]" : "";
                         const liveTick = ticks[l.symbol] || ticks[`${l.symbol}.NS`];
                         const dayPct = liveTick ? liveTick.day_change_pct : l.day_change_pct;
                         return (
                           <div
                             key={l.symbol}
                             onClick={() => setSelectedSector(l.sector)}
-                            className={`flex items-center justify-between p-2 rounded-xl bg-slate-950/40 border border-slate-800/40 hover:border-rose-500/40 cursor-pointer transition-all duration-500 text-xs mb-1.5 ${flashClass}`}
+                            className={`flex items-center justify-between p-2.5 rounded-xl bg-black/30 border border-white/[0.04] hover:border-rose-500/40 hover:bg-white/[0.04] cursor-pointer transition-all duration-300 text-xs mb-1.5 ${flashClass}`}
                           >
                             <div>
                               <div className="font-bold text-slate-300">{l.symbol}</div>
                               <div className="text-[10px] text-slate-500 truncate max-w-[120px]">{l.company_name}</div>
                             </div>
                             <div className="text-right">
-                              <div className="font-bold text-rose-400">{dayPct.toFixed(2)}%</div>
-                              <div className="text-[10px] text-slate-500">{formatINR(l.day_pnl_contribution)}</div>
+                              <div className="font-black text-rose-400 font-mono">{dayPct.toFixed(2)}%</div>
+                              <div className="text-[10px] text-slate-500 font-mono">{formatINR(l.day_pnl_contribution)}</div>
                             </div>
                           </div>
                         );
@@ -646,54 +658,56 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="mt-4 text-[11px] text-slate-500 text-center">Click a mover to filter holdings below</div>
+              <div className="mt-4 text-[10px] font-mono text-slate-500 text-center">Click a mover to filter holdings ledger</div>
             </div>
 
             {/* Concentration Intelligence Card */}
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-5 backdrop-blur-md shadow-xl flex flex-col justify-between">
+            <div className="cyber-card cyber-card-cyan p-5 sm:p-6 backdrop-blur-2xl flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <span>🎯</span> Concentration Intelligence
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-black text-white flex items-center gap-2">
+                    <span className="text-cyan-400">🎯</span> Concentration Intelligence
                   </h3>
-                  <span className="text-[11px] text-slate-500">Risk Distribution</span>
+                  <span className="text-[10px] font-mono uppercase font-bold tracking-wider text-slate-500 bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.06]">
+                    Hedge Metric
+                  </span>
                 </div>
 
                 <div className="space-y-4">
                   {/* Largest Holding Indicator */}
-                  <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/60">
-                    <div className="text-[11px] text-slate-400 uppercase tracking-wider">Largest Single Holding</div>
-                    <div className="flex items-baseline justify-between mt-1">
-                      <div className="font-bold text-slate-200 text-sm">
+                  <div className="p-4 rounded-2xl bg-black/40 border border-white/[0.06]">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Largest Position</div>
+                    <div className="flex items-baseline justify-between mt-1.5">
+                      <div className="font-black text-slate-100 text-sm">
                         {concentration?.largest_holding_symbol || "None"}
                         <span className="text-xs text-slate-400 font-normal ml-2">
                           ({concentration?.largest_holding_name})
                         </span>
                       </div>
-                      <div className="text-sm font-black text-emerald-400">
+                      <div className="text-sm font-black text-emerald-400 font-mono">
                         {concentration?.largest_holding_pct?.toFixed(1)}%
                       </div>
                     </div>
-                    <div className="w-full bg-slate-800 rounded-full h-1.5 mt-2">
+                    <div className="w-full bg-slate-800/80 rounded-full h-2 mt-2.5 overflow-hidden">
                       <div
-                        className="bg-emerald-400 h-1.5 rounded-full"
+                        className="bg-gradient-to-r from-emerald-500 to-teal-400 h-2 rounded-full shadow-[0_0_10px_rgba(16,231,157,0.5)]"
                         style={{ width: `${Math.min(100, concentration?.largest_holding_pct || 0)}%` }}
                       />
                     </div>
                   </div>
 
                   {/* Top-5 Holdings Ratio */}
-                  <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/60">
-                    <div className="text-[11px] text-slate-400 uppercase tracking-wider">Top 5 Positions Ratio</div>
-                    <div className="flex items-baseline justify-between mt-1">
-                      <div className="text-xs text-slate-300">Cumulative Weight</div>
-                      <div className="text-sm font-black text-cyan-400">
+                  <div className="p-4 rounded-2xl bg-black/40 border border-white/[0.06]">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Top 5 Positions Ratio</div>
+                    <div className="flex items-baseline justify-between mt-1.5">
+                      <div className="text-xs text-slate-300 font-medium">Cumulative Allocation</div>
+                      <div className="text-sm font-black text-cyan-400 font-mono">
                         {concentration?.top_5_concentration_pct?.toFixed(1)}%
                       </div>
                     </div>
-                    <div className="w-full bg-slate-800 rounded-full h-1.5 mt-2">
+                    <div className="w-full bg-slate-800/80 rounded-full h-2 mt-2.5 overflow-hidden">
                       <div
-                        className="bg-cyan-400 h-1.5 rounded-full"
+                        className="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 rounded-full shadow-[0_0_10px_rgba(6,182,212,0.5)]"
                         style={{ width: `${Math.min(100, concentration?.top_5_concentration_pct || 0)}%` }}
                       />
                     </div>
@@ -701,65 +715,65 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+              <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono">
                 <span className="text-slate-400">Diversification Index:</span>
-                <span className="font-bold text-slate-200">{health?.diversification_score?.toFixed(2) || "0.00"} / 1.00</span>
+                <span className="font-black text-slate-200">{health?.diversification_score?.toFixed(2) || "0.00"} / 1.00</span>
               </div>
             </div>
 
             {/* Portfolio Health Snapshot */}
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-5 backdrop-blur-md shadow-xl flex flex-col justify-between">
+            <div className="cyber-card cyber-card-iris p-5 sm:p-6 backdrop-blur-2xl flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <span>🛡️</span> Institutional Health
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-black text-white flex items-center gap-2">
+                    <span className="text-indigo-400">🛡️</span> Institutional Health
                   </h3>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                    health?.risk_category === "LOW" ? "bg-emerald-500/20 text-emerald-400" :
-                    health?.risk_category === "HIGH" ? "bg-rose-500/20 text-rose-400" : "bg-amber-500/20 text-amber-400"
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
+                    health?.risk_category === "LOW" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10" :
+                    health?.risk_category === "HIGH" ? "bg-rose-500/10 text-rose-400 border-rose-500/30 shadow-rose-500/10" : "bg-amber-500/10 text-amber-400 border-amber-500/30"
                   }`}>
                     {health?.risk_category || "MODERATE"} RISK
                   </span>
                 </div>
 
-                <div className="flex items-center gap-4 p-3 rounded-2xl bg-slate-950/60 border border-slate-800/60 mb-3">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-emerald-500/20">
+                <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-black/40 border border-white/[0.06] mb-3">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-400 via-teal-500 to-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-emerald-500/30">
                     {health?.health_score || 0}
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-200">Portfolio Health Score</div>
+                    <div className="text-xs font-bold text-slate-100">Health Score</div>
                     <div className="text-[11px] text-slate-400 mt-0.5">
-                      Based on diversification, Sharpe ratio, and drawdown moderation.
+                      Multi-factor calibration across Sharpe ratio, beta & downside volatility.
                     </div>
                   </div>
                 </div>
 
                 {/* Metric Pills */}
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2 rounded-xl bg-slate-950/40 border border-slate-800/60">
-                    <div className="text-[10px] text-slate-500">Volatility</div>
-                    <div className="font-semibold text-slate-300 mt-0.5">{health?.volatility_label || "18.2%"}</div>
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="p-2 rounded-xl bg-black/30 border border-white/[0.04]">
+                    <div className="text-[10px] text-slate-500 uppercase font-sans font-bold">Volatility</div>
+                    <div className="font-bold text-slate-200 mt-0.5">{health?.volatility_label || "18.2%"}</div>
                   </div>
-                  <div className="p-2 rounded-xl bg-slate-950/40 border border-slate-800/60">
-                    <div className="text-[10px] text-slate-500">Sharpe Ratio</div>
-                    <div className="font-semibold text-slate-300 mt-0.5">{health?.sharpe_ratio?.toFixed(2) || "1.20"}</div>
+                  <div className="p-2 rounded-xl bg-black/30 border border-white/[0.04]">
+                    <div className="text-[10px] text-slate-500 uppercase font-sans font-bold">Sharpe Ratio</div>
+                    <div className="font-bold text-slate-200 mt-0.5">{health?.sharpe_ratio?.toFixed(2) || "1.20"}</div>
                   </div>
-                  <div className="p-2 rounded-xl bg-slate-950/40 border border-slate-800/60">
-                    <div className="text-[10px] text-slate-500">Max Drawdown</div>
-                    <div className="font-semibold text-rose-400 mt-0.5">{health?.max_drawdown_label || "-12.5%"}</div>
+                  <div className="p-2 rounded-xl bg-black/30 border border-white/[0.04]">
+                    <div className="text-[10px] text-slate-500 uppercase font-sans font-bold">Max Drawdown</div>
+                    <div className="font-bold text-rose-400 mt-0.5">{health?.max_drawdown_label || "-12.5%"}</div>
                   </div>
-                  <div className="p-2 rounded-xl bg-slate-950/40 border border-slate-800/60">
-                    <div className="text-[10px] text-slate-500">AI Confidence</div>
-                    <div className="font-semibold text-emerald-400 mt-0.5">{(Number(health?.confidence || 0.85) * 100).toFixed(0)}%</div>
+                  <div className="p-2 rounded-xl bg-black/30 border border-white/[0.04]">
+                    <div className="text-[10px] text-slate-500 uppercase font-sans font-bold">AI Confidence</div>
+                    <div className="font-bold text-emerald-400 mt-0.5">{(Number(health?.confidence || 0.85) * 100).toFixed(0)}%</div>
                   </div>
                 </div>
               </div>
 
               <Link
-                href="/test-risk"
-                className="mt-4 w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-center text-xs font-semibold text-emerald-400 transition-all border border-slate-700/60 flex items-center justify-center gap-1"
+                href="/intelligence"
+                className="mt-4 w-full py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-center text-xs font-bold text-emerald-400 transition-all border border-white/[0.08] flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
               >
-                <span>Explore Deep AI Insights (Milestone 4)</span>
+                <span>Explore TreeSHAP Explainability</span>
                 <span>➔</span>
               </Link>
             </div>
@@ -768,46 +782,48 @@ export default function DashboardPage() {
           {/* 3.5. PRIMARY MARKETS (IPO) & MARKET NEWS WIRE WIDGETS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left: IPO Radar Spotlight */}
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 backdrop-blur-md shadow-xl flex flex-col justify-between">
+            <div className="cyber-card cyber-card-iris p-6 backdrop-blur-2xl flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <span className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-bold">
+                    <span className="p-1.5 px-2.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/30 text-xs font-black shadow-[0_0_12px_rgba(168,85,247,0.2)] flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" />
                       HOT IPO
                     </span>
-                    <h3 className="text-sm font-bold text-white">IPO Spotlight</h3>
+                    <h3 className="text-sm font-black text-white">Primary Market Radar</h3>
                   </div>
-                  <Link href="/ipo" className="text-xs text-emerald-400 hover:underline">
-                    Explore All IPOs ➔
+                  <Link href="/ipo" className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                    <span>Explore All</span>
+                    <span>➔</span>
                   </Link>
                 </div>
 
                 {topIpo ? (
-                  <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/60 space-y-3">
+                  <div className="p-4 rounded-2xl bg-black/40 border border-white/[0.08] space-y-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <div className="font-bold text-slate-100 text-sm">{topIpo.company_name}</div>
+                        <div className="font-black text-slate-100 text-sm">{topIpo.company_name}</div>
                         <div className="text-[11px] text-slate-400 font-mono mt-0.5">
                           ₹{topIpo.price_band_low} - ₹{topIpo.price_band_high} • Lot: {topIpo.lot_size} shares
                         </div>
                       </div>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-sm">
                         {topIpo.ai_analysis.verdict.replace(/_/g, " ")}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/60 text-[11px] font-mono">
-                      <div>
-                        <span className="text-slate-500 text-[10px]">Live GMP</span>
-                        <div className="font-bold text-emerald-400">+{topIpo.gmp_pct}%</div>
+                    <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-white/[0.06] text-[11px] font-mono">
+                      <div className="p-2 rounded-xl bg-white/[0.02]">
+                        <span className="text-slate-500 text-[10px] uppercase font-sans font-bold">Live GMP</span>
+                        <div className="font-black text-emerald-400 text-xs mt-0.5">+{topIpo.gmp_pct}%</div>
                       </div>
-                      <div>
-                        <span className="text-slate-500 text-[10px]">AI Score</span>
-                        <div className="font-bold text-slate-200">{topIpo.ai_analysis.quality_score}/100</div>
+                      <div className="p-2 rounded-xl bg-white/[0.02]">
+                        <span className="text-slate-500 text-[10px] uppercase font-sans font-bold">AI Score</span>
+                        <div className="font-black text-slate-100 text-xs mt-0.5">{topIpo.ai_analysis.quality_score}/100</div>
                       </div>
-                      <div>
-                        <span className="text-slate-500 text-[10px]">Subscription</span>
-                        <div className="font-bold text-slate-200">{topIpo.subscription.total_multiple}x</div>
+                      <div className="p-2 rounded-xl bg-white/[0.02]">
+                        <span className="text-slate-500 text-[10px] uppercase font-sans font-bold">Velocity</span>
+                        <div className="font-black text-cyan-400 text-xs mt-0.5">{topIpo.subscription.total_multiple}x</div>
                       </div>
                     </div>
                   </div>
@@ -820,24 +836,27 @@ export default function DashboardPage() {
 
               <Link
                 href="/ipo"
-                className="mt-4 w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold text-center border border-slate-700 transition-all flex items-center justify-center gap-1.5"
+                className="mt-4 w-full py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-bold text-center border border-white/[0.08] transition-all flex items-center justify-center gap-1.5 active:scale-95"
               >
                 <span>View Full AI Risk Scorecard & GMP</span>
+                <span>➔</span>
               </Link>
             </div>
 
             {/* Right: Live Market News Wire */}
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 backdrop-blur-md shadow-xl flex flex-col justify-between">
+            <div className="cyber-card cyber-card-cyan p-6 backdrop-blur-2xl flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-bold">
+                    <span className="p-1.5 px-2.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 text-xs font-black shadow-[0_0_12px_rgba(6,182,212,0.2)] flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
                       LIVE WIRE
                     </span>
-                    <h3 className="text-sm font-bold text-white">Market Intelligence News</h3>
+                    <h3 className="text-sm font-black text-white">Sentiment Radar News</h3>
                   </div>
-                  <Link href="/news" className="text-xs text-blue-400 hover:underline">
-                    View News Feed ➔
+                  <Link href="/news" className="text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
+                    <span>View Wire</span>
+                    <span>➔</span>
                   </Link>
                 </div>
 
@@ -846,21 +865,21 @@ export default function DashboardPage() {
                     breakingNews.map((n) => (
                       <div
                         key={n.id}
-                        className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/60 text-xs hover:border-slate-700 transition-all space-y-1.5"
+                        className="p-3.5 rounded-2xl bg-black/40 border border-white/[0.06] text-xs hover:border-cyan-500/30 transition-all space-y-1.5"
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] text-slate-400 font-semibold">{n.source} • {n.time_ago}</span>
-                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-black tracking-wider ${
                             n.sentiment === "BULLISH"
-                              ? "bg-emerald-500/10 text-emerald-400"
+                              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
                               : n.sentiment === "BEARISH"
-                              ? "bg-rose-500/10 text-rose-400"
-                              : "bg-slate-500/10 text-slate-400"
+                              ? "bg-rose-500/10 text-rose-400 border border-rose-500/30"
+                              : "bg-slate-500/10 text-slate-400 border border-slate-500/30"
                           }`}>
                             {n.sentiment}
                           </span>
                         </div>
-                        <div className="font-bold text-slate-200 text-xs line-clamp-1">{n.headline}</div>
+                        <div className="font-bold text-slate-100 text-xs line-clamp-1">{n.headline}</div>
                         <div className="text-[11px] text-slate-400 line-clamp-1">{n.summary}</div>
                       </div>
                     ))
@@ -874,9 +893,10 @@ export default function DashboardPage() {
 
               <Link
                 href="/news"
-                className="mt-4 w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold text-center border border-slate-700 transition-all flex items-center justify-center gap-1.5"
+                className="mt-4 w-full py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-bold text-center border border-white/[0.08] transition-all flex items-center justify-center gap-1.5 active:scale-95"
               >
                 <span>Read Full Market Sentiment Wire</span>
+                <span>➔</span>
               </Link>
             </div>
           </div>
@@ -884,20 +904,20 @@ export default function DashboardPage() {
           {/* 4. ALLOCATION DRILLDOWN & RECENT ACTIVITY (2-Column Grid) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left: Sector & Asset Allocation (2 cols on lg) */}
-            <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 backdrop-blur-md shadow-xl space-y-6">
+            <div className="lg:col-span-2 cyber-card p-6 sm:p-7 backdrop-blur-2xl space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <span>🍩</span> Asset & Sector Allocation Drill-Down
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <span className="text-emerald-400">🍩</span> Asset & Sector Allocation Drill-Down
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-400 mt-0.5">
                     Click any sector below to filter and inspect its individual constituent holdings.
                   </p>
                 </div>
                 {selectedSector && (
                   <button
                     onClick={() => setSelectedSector(null)}
-                    className="self-start sm:self-auto px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 rounded-lg border border-slate-700 transition-all"
+                    className="self-start sm:self-auto px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-bold text-emerald-400 rounded-xl border border-emerald-500/30 transition-all"
                   >
                     ✕ Clear Filter ({selectedSector})
                   </button>
@@ -906,7 +926,7 @@ export default function DashboardPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Asset Class Allocation Donut */}
-                <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800/60">
+                <div className="bg-black/40 p-4 rounded-2xl border border-white/[0.06]">
                   <div className="text-xs font-bold text-slate-300 mb-2">Asset Class Exposure</div>
                   {assetAlloc.length > 0 ? (
                     <div className="h-44 flex items-center">
@@ -926,7 +946,7 @@ export default function DashboardPage() {
                               ))}
                             </Pie>
                             <Tooltip
-                              contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", borderRadius: "0.75rem" }}
+                              contentStyle={{ backgroundColor: "#070c1a", borderColor: "rgba(255,255,255,0.1)", borderRadius: "0.75rem" }}
                               formatter={(val) => [`${Number(val || 0).toFixed(1)}%`]}
                             />
                           </PieChart>
@@ -953,7 +973,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Sector Allocation Breakdown */}
-                <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800/60">
+                <div className="bg-black/40 p-4 rounded-2xl border border-white/[0.06]">
                   <div className="text-xs font-bold text-slate-300 mb-2">Sector Concentration</div>
                   {sectorAlloc.length > 0 ? (
                     <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
@@ -961,10 +981,10 @@ export default function DashboardPage() {
                         <div
                           key={s.name}
                           onClick={() => setSelectedSector(selectedSector === s.name ? null : s.name)}
-                          className={`flex items-center justify-between p-2 rounded-xl text-xs cursor-pointer transition-all border ${
+                          className={`flex items-center justify-between p-2.5 rounded-xl text-xs cursor-pointer transition-all border ${
                             selectedSector === s.name
-                              ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-300 font-bold"
-                              : "bg-slate-900/40 border-slate-800/40 text-slate-300 hover:bg-slate-800/60"
+                              ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-bold shadow-[0_0_15px_rgba(16,231,157,0.15)]"
+                              : "bg-white/[0.02] border-white/[0.04] text-slate-300 hover:bg-white/[0.05]"
                           }`}
                         >
                           <div className="flex items-center gap-2">
@@ -974,7 +994,7 @@ export default function DashboardPage() {
                             />
                             <span>{s.name}</span>
                           </div>
-                          <div className="font-mono">{s.percentage.toFixed(1)}%</div>
+                          <div className="font-mono font-black">{s.percentage.toFixed(1)}%</div>
                         </div>
                       ))}
                     </div>
@@ -990,43 +1010,43 @@ export default function DashboardPage() {
                   <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                     {selectedSector ? `Constituents in ${selectedSector}` : "All Active Holdings"} ({displayedHoldings.length})
                   </h4>
-                  <Link href="/holdings" className="text-xs text-emerald-400 hover:underline">
+                  <Link href="/holdings" className="text-xs font-bold text-emerald-400 hover:text-emerald-300">
                     Manage All Holdings ➔
                   </Link>
                 </div>
 
-                <div className="overflow-x-auto rounded-2xl border border-slate-800/80 bg-slate-950/60">
+                <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-black/40 backdrop-blur-xl">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-900/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                    <thead className="bg-white/[0.03] text-slate-400 uppercase text-[10px] tracking-wider border-b border-white/[0.06]">
                       <tr>
-                        <th className="py-3 px-4">Asset</th>
-                        <th className="py-3 px-4">Quantity</th>
-                        <th className="py-3 px-4">Avg Price</th>
-                        <th className="py-3 px-4">LTP</th>
-                        <th className="py-3 px-4">Current Value</th>
-                        <th className="py-3 px-4">P&L</th>
-                        <th className="py-3 px-4 text-right">Weight</th>
+                        <th className="py-3.5 px-4 font-bold">Asset</th>
+                        <th className="py-3.5 px-4 font-bold">Quantity</th>
+                        <th className="py-3.5 px-4 font-bold">Avg Price</th>
+                        <th className="py-3.5 px-4 font-bold">LTP</th>
+                        <th className="py-3.5 px-4 font-bold">Current Value</th>
+                        <th className="py-3.5 px-4 font-bold">P&L</th>
+                        <th className="py-3.5 px-4 text-right font-bold">Weight</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800/60">
+                    <tbody className="divide-y divide-white/[0.04]">
                       {displayedHoldings.length > 0 ? (
                         displayedHoldings.slice(0, 6).map((h: HoldingItem) => (
-                          <tr key={h.id} className="hover:bg-slate-900/40 transition-colors">
+                          <tr key={h.id} className="hover:bg-white/[0.03] transition-colors">
                             <td className="py-3 px-4">
-                              <div className="font-bold text-slate-200">{h.symbol}</div>
+                              <div className="font-bold text-slate-100">{h.symbol}</div>
                               <div className="text-[10px] text-slate-400">{h.company_name}</div>
                             </td>
-                            <td className="py-3 px-4 text-slate-300">{h.quantity}</td>
-                            <td className="py-3 px-4 text-slate-300">{formatINR(h.avg_buy_price)}</td>
-                            <td className="py-3 px-4 text-slate-300">{formatINR(h.current_price)}</td>
-                            <td className="py-3 px-4 font-semibold text-slate-200">{formatINR(h.current_value)}</td>
-                            <td className="py-3 px-4">
-                              <span className={`font-bold ${h.unrealized_pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                            <td className="py-3 px-4 text-slate-300 font-mono">{h.quantity}</td>
+                            <td className="py-3 px-4 text-slate-300 font-mono">{formatINR(h.avg_buy_price)}</td>
+                            <td className="py-3 px-4 text-slate-300 font-mono">{formatINR(h.current_price)}</td>
+                            <td className="py-3 px-4 font-bold text-slate-100 font-mono">{formatINR(h.current_value)}</td>
+                            <td className="py-3 px-4 font-mono">
+                              <span className={`font-black ${h.unrealized_pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                                 {h.unrealized_pnl >= 0 ? "+" : ""}
                                 {formatINR(h.unrealized_pnl)} ({h.unrealized_pnl_pct.toFixed(2)}%)
                               </span>
                             </td>
-                            <td className="py-3 px-4 text-right font-mono text-slate-300">
+                            <td className="py-3 px-4 text-right font-mono font-bold text-slate-300">
                               {h.weight.toFixed(1)}%
                             </td>
                           </tr>
@@ -1045,14 +1065,14 @@ export default function DashboardPage() {
             </div>
 
             {/* Right: Recent Transaction Activity Stream */}
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 backdrop-blur-md shadow-xl flex flex-col justify-between">
+            <div className="cyber-card p-6 backdrop-blur-2xl flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <span>⚡</span> Recent Activity
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <span className="text-amber-400">⚡</span> Recent Audit Activity
                   </h3>
-                  <Link href="/transactions" className="text-xs text-emerald-400 hover:underline">
-                    View Full Ledger
+                  <Link href="/transactions" className="text-xs font-bold text-emerald-400 hover:text-emerald-300">
+                    Full Ledger ➔
                   </Link>
                 </div>
 
@@ -1061,28 +1081,28 @@ export default function DashboardPage() {
                     recentActivity.map((tx) => (
                       <div
                         key={tx.id}
-                        className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/60 flex items-center justify-between text-xs hover:border-slate-700 transition-all"
+                        className="p-3.5 rounded-2xl bg-black/40 border border-white/[0.06] flex items-center justify-between text-xs hover:border-white/[0.15] transition-all"
                       >
                         <div className="flex items-center gap-3">
                           <span
-                            className={`px-2 py-1 rounded-lg text-[10px] font-extrabold uppercase ${
+                            className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
                               tx.transaction_type === "BUY"
-                                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                                : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                                : "bg-rose-500/10 text-rose-400 border border-rose-500/30"
                             }`}
                           >
                             {tx.transaction_type}
                           </span>
                           <div>
-                            <div className="font-bold text-slate-200">{tx.symbol}</div>
-                            <div className="text-[10px] text-slate-400">
+                            <div className="font-bold text-slate-100">{tx.symbol}</div>
+                            <div className="text-[10px] text-slate-400 font-mono">
                               {tx.quantity} units @ {formatINR(tx.price)}
                             </div>
                           </div>
                         </div>
 
-                        <div className="text-right">
-                          <div className="font-bold text-slate-200">{formatINR(tx.total_amount)}</div>
+                        <div className="text-right font-mono">
+                          <div className="font-black text-slate-100">{formatINR(tx.total_amount)}</div>
                           <div className="text-[10px] text-slate-500">
                             {new Date(tx.transaction_date).toLocaleDateString()}
                           </div>
@@ -1099,12 +1119,14 @@ export default function DashboardPage() {
 
               <Link
                 href="/transactions"
-                className="mt-6 w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold text-center border border-slate-700 transition-all flex items-center justify-center gap-1.5"
+                className="mt-4 w-full py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-bold text-center border border-white/[0.08] transition-all flex items-center justify-center gap-1.5 active:scale-95"
               >
-                <span>+ Record BUY / SELL Order</span>
+                <span>Record New Transaction</span>
+                <span>➔</span>
               </Link>
             </div>
           </div>
+          </MotionContainer>
         </main>
       </div>
     </div>

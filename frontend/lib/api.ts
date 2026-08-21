@@ -1119,11 +1119,23 @@ export async function getPortfolioTaxReportCSV(
   taxYear?: string
 ): Promise<string> {
   const qs = taxYear ? `?tax_year=${encodeURIComponent(taxYear)}` : "";
-  const token = typeof window !== "undefined" ? localStorage.getItem("nexfolio_token") : null;
+  const authHeaders = await getAuthHeaders();
   const res = await fetch(`${API_BASE_URL}/api/v1/portfolios/${portfolioId}/tax-report/export-csv${qs}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
+    headers: {
+      ...authHeaders,
+    }
   });
-  if (!res.ok) throw new Error("Failed to export tax CSV");
+  if (!res.ok) {
+    let errorMsg = "Failed to export tax CSV";
+    try {
+      const err = await res.json();
+      errorMsg = err.detail || errorMsg;
+    } catch {
+      // fallback to statusText
+      errorMsg = res.statusText || errorMsg;
+    }
+    throw new Error(errorMsg);
+  }
   return res.text();
 }
 

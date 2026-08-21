@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, use } from "react";
 import Link from "next/link";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
+import { MotionContainer } from "@/components/ui/motion";
 import {
   getStockDetail,
   toggleWatchlistSymbol,
@@ -161,13 +162,14 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
   }, [filteredHistory]);
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+    <div className="flex min-h-screen bg-[#030712] text-slate-100 font-sans antialiased">
       <Sidebar />
 
       <div className="flex flex-col flex-1 min-w-0">
         <Header title="Stock Intelligence" />
 
         <main className="flex-1 p-4 lg:p-8 space-y-6 max-w-[1600px] w-full mx-auto">
+          <MotionContainer className="space-y-6">
           {/* Back Navigation Bar */}
           <div className="flex items-center justify-between">
             <Link
@@ -619,6 +621,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
               )}
             </>
           )}
+          </MotionContainer>
         </main>
       </div>
     </div>

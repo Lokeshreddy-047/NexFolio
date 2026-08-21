@@ -641,7 +641,7 @@ def generate_itr_schedule_csv(tax_report: TaxReportResponse) -> str:
     output = io.StringIO()
     writer = csv.writer(output)
 
-    # Header Row
+    # 1. Primary Capital Gains Lot Schedule (ITR Schedule CG)
     writer.writerow([
         "Lot ID",
         "Tax Year",
@@ -690,5 +690,37 @@ def generate_itr_schedule_csv(tax_report: TaxReportResponse) -> str:
             f"{lot.stt_paid:.2f}",
             lot.rule_set_id
         ])
+
+    # 2. Append Actionable Tax Loss Harvesting Candidates (if any)
+    if tax_report.loss_harvesting and tax_report.loss_harvesting.candidates:
+        writer.writerow([])
+        writer.writerow(["# --- SCHEDULE TLH: ACTIONABLE TAX LOSS HARVESTING OPPORTUNITIES ---"])
+        writer.writerow([
+            "Symbol",
+            "Company Name",
+            "Sector",
+            "Quantity",
+            "Avg Buy Price (INR)",
+            "Current Price (INR)",
+            "Harvestable Loss (INR)",
+            "Loss Classification",
+            "Holding Months",
+            "Estimated Tax Saving (INR)",
+            "Rebalancing Action"
+        ])
+        for c in tax_report.loss_harvesting.candidates:
+            writer.writerow([
+                c.symbol,
+                c.company_name,
+                c.sector,
+                c.quantity,
+                f"{c.avg_buy_price:.2f}",
+                f"{c.current_price:.2f}",
+                f"{c.harvestable_loss:.2f}",
+                c.loss_classification,
+                c.holding_period_months,
+                f"{c.estimated_incremental_tax_saving:.2f}",
+                c.recommendation_rationale
+            ])
 
     return output.getvalue()

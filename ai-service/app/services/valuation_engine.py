@@ -93,6 +93,7 @@ class RealtimeValuationEngine:
         for h in holdings_docs:
             h_id = str(h.get("_id") or h.get("id"))
             raw_sym = h.get("symbol", "")
+            can_sym = canonical_map.get(raw_sym) or SymbolNormalizer.to_canonical(raw_sym)
             qty = float(h.get("quantity") if h.get("quantity") is not None else h.get("shares", 0.0))
             avg_price = float(h.get("avg_buy_price") if h.get("avg_buy_price") is not None else (h.get("average_price") or h.get("avg_price", 0.0)))
             invested = qty * avg_price

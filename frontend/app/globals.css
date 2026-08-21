@@ -1,14 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #020617;
+  --background: #030712;
   --foreground: #f8fafc;
-  --card-bg: rgba(15, 23, 42, 0.7);
-  --card-border: rgba(30, 41, 59, 0.8);
+  --card-bg: rgba(13, 20, 36, 0.75);
+  --card-border: rgba(255, 255, 255, 0.08);
   --muted-text: #94a3b8;
-  --panel-bg: #0b0f19;
-  --input-bg: #020617;
-  --border-color: #1e293b;
+  --panel-bg: #070c18;
+  --input-bg: #030712;
+  --border-color: rgba(255, 255, 255, 0.08);
+  
+  /* Brand Accent Tokens */
+  --accent-mint: #10e79d;
+  --accent-iris: #6366f1;
+  --accent-cyan: #06b6d4;
+  --accent-rose: #ff3b69;
+  --accent-amber: #f59e0b;
 }
 
 html.light {
@@ -20,6 +27,12 @@ html.light {
   --panel-bg: #ffffff;
   --input-bg: #ffffff;
   --border-color: #cbd5e1;
+  
+  --accent-mint: #059669;
+  --accent-iris: #4f46e5;
+  --accent-cyan: #0284c7;
+  --accent-rose: #e11d48;
+  --accent-amber: #d97706;
 }
 
 @theme inline {
@@ -31,11 +44,147 @@ html.light {
 body {
   background-color: var(--background);
   color: var(--foreground);
-  transition: background-color 0.25s ease, color 0.25s ease;
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
 /* ---------------------------------------------------------------------------
-   LIGHT THEME DESIGN SYSTEM (Crisp Institutional Light Palette)
+   DARK MODE AMBIENCE & SPECULAR HIGHLIGHTS
+   --------------------------------------------------------------------------- */
+html:not(.light) .glass-panel {
+  background-color: rgba(10, 16, 31, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+html:not(.light) .glass-panel-hover:hover {
+  border-color: rgba(16, 231, 157, 0.35);
+  box-shadow: 0 0 30px -5px rgba(16, 231, 157, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* ---------------------------------------------------------------------------
+   CYBER-INSTITUTIONAL BENTO & GLOW UTILITIES
+   --------------------------------------------------------------------------- */
+
+/* Ambient grid overlay */
+.bg-grid-cyber {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+html.light .bg-grid-cyber {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+}
+
+/* High-tier cyber card with specular top highlight */
+.cyber-card {
+  position: relative;
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.7) 0%, rgba(3, 7, 18, 0.85) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cyber-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* Accent Glow variants */
+.cyber-card-mint:hover {
+  border-color: rgba(16, 231, 157, 0.4);
+  box-shadow: 0 0 35px -5px rgba(16, 231, 157, 0.18), inset 0 1px 0 rgba(16, 231, 157, 0.25);
+}
+
+.cyber-card-iris:hover {
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 0 35px -5px rgba(99, 102, 241, 0.2), inset 0 1px 0 rgba(99, 102, 241, 0.3);
+}
+
+.cyber-card-cyan:hover {
+  border-color: rgba(6, 182, 212, 0.45);
+  box-shadow: 0 0 35px -5px rgba(6, 182, 212, 0.2), inset 0 1px 0 rgba(6, 182, 212, 0.3);
+}
+
+/* Continuous Marquee Ticker Keyframe */
+@keyframes ticker {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-ticker {
+  display: flex;
+  width: max-content;
+  animation: ticker 40s linear infinite;
+}
+
+.animate-ticker:hover {
+  animation-play-state: paused;
+}
+
+/* Subtle Breathing Glow Aura */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.04);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 8s ease-in-out infinite;
+}
+
+/* Shimmer gradient text */
+.text-shimmer {
+  background: linear-gradient(90deg, #f8fafc 0%, #cbd5e1 50%, #f8fafc 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.text-gradient-mint {
+  background: linear-gradient(135deg, #10e79d 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-gradient-iris {
+  background: linear-gradient(135deg, #a78bfa 0%, #6366f1 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-gradient-fire {
+  background: linear-gradient(135deg, #fbbf24 0%, #f43f5e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+   LIGHT THEME DESIGN SYSTEM (Crisp Executive Alabaster & Ceramic White)
    --------------------------------------------------------------------------- */
 
 html.light body {
@@ -233,12 +382,12 @@ html.light tbody tr:hover {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.3);
+  background: rgba(148, 163, 184, 0.25);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.5);
+  background: rgba(148, 163, 184, 0.45);
 }
 
 /* 10. Print optimizations */

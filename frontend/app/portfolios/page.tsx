@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
+import { MotionContainer } from "@/components/ui/motion";
 import {
   getPortfolios,
   createPortfolio,
@@ -161,7 +162,7 @@ export default function PortfoliosPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
+    <div className="flex min-h-screen bg-[#030712] text-slate-100 font-sans antialiased">
       <Sidebar />
 
       <div className="flex flex-col flex-1 min-w-0">
@@ -171,6 +172,7 @@ export default function PortfoliosPage() {
         />
 
         <main className="flex-1 p-4 lg:p-8 space-y-6 max-w-[1600px] w-full mx-auto">
+          <MotionContainer className="space-y-6">
           {/* Aggregate KPI Summary Area */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 shadow-sm">
@@ -384,6 +386,7 @@ export default function PortfoliosPage() {
               })}
             </div>
           )}
+          </MotionContainer>
         </main>
       </div>
 
