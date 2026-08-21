@@ -57,7 +57,45 @@ class ReferenceMarketProvider(MarketDataProvider):
         stock_catalog = _load_stocks()
         catalog_map = {s["symbol"]: s for s in stock_catalog}
 
-        # 1. Try loading from full Parquet dataset
+        # 1. Primary: Load verified authentic snapshot JSON (latest authentic exchange closing quotes)
+        if SNAPSHOT_PATH.exists():
+            try:
+                with open(SNAPSHOT_PATH, "r", encoding="utf-8") as f:
+                    snap_data = json.load(f)
+
+                latest_map = {}
+                for sym, s in snap_data.items():
+                    base_sym = s.get("base_symbol", sym.replace(".NS", ""))
+                    name = s.get("company_name", POPULAR_NAMES.get(sym, f"{base_sym} Ltd"))
+                    curr_p = float(s.get("current_price", 100.0))
+                    day_chg_pct = float(s.get("day_change_pct", 0.0))
+                    day_chg = float(s.get("day_change", 0.0))
+                    h52 = float(s.get("high_52w", curr_p * 1.25))
+                    l52 = float(s.get("low_52w", curr_p * 0.75))
+
+                    latest_map[sym] = {
+                        "symbol": sym,
+                        "base_symbol": base_sym,
+                        "company_name": name,
+                        "sector": s.get("sector", "Diversified"),
+                        "current_price": curr_p,
+                        "day_change": day_chg,
+                        "day_change_pct": day_chg_pct,
+                        "open": float(s.get("open", curr_p)),
+                        "high": float(s.get("high", curr_p * 1.01)),
+                        "low": float(s.get("low", curr_p * 0.99)),
+                        "volume": int(s.get("volume", 500000)),
+                        "high_52w": h52,
+                        "low_52w": l52,
+                        "pct_from_52w_high": float(s.get("pct_from_52w_high", -10.0)),
+                        "market_cap_category": s.get("market_cap_category", "Mid Cap"),
+                    }
+                self._latest_stock_cache = latest_map
+                return
+            except Exception as exc:
+                print(f"[ReferenceMarketProvider] Error loading snapshot JSON: {exc}")
+
+        # 2. Secondary fallback: Historical Parquet dataset
         if self.parquet_path.exists():
             try:
                 df = pd.read_parquet(self.parquet_path)
@@ -67,11 +105,9 @@ class ReferenceMarketProvider(MarketDataProvider):
                 df = df.sort_values(["ticker", "date"]).reset_index(drop=True)
                 self._market_df = df
 
-                # Build latest point per ticker
                 latest_idx = df.groupby("ticker")["date"].idxmax()
                 latest_df = df.loc[latest_idx].copy()
 
-                # Compute 52W High and Low per ticker
                 recent_df = df[df["date"] >= (df["date"].max() - pd.Timedelta(days=365))]
                 high_52w_map = recent_df.groupby("ticker")["high"].max().to_dict()
                 low_52w_map = recent_df.groupby("ticker")["low"].min().to_dict()
@@ -118,44 +154,6 @@ class ReferenceMarketProvider(MarketDataProvider):
                 return
             except Exception as exc:
                 print(f"[ReferenceMarketProvider] Error loading market_features.parquet: {exc}")
-
-        # 2. Try loading from lightweight snapshot JSON
-        if SNAPSHOT_PATH.exists():
-            try:
-                with open(SNAPSHOT_PATH, "r", encoding="utf-8") as f:
-                    snap_data = json.load(f)
-
-                latest_map = {}
-                for sym, s in snap_data.items():
-                    base_sym = s.get("base_symbol", sym.replace(".NS", ""))
-                    name = s.get("company_name", POPULAR_NAMES.get(sym, f"{base_sym} Ltd"))
-                    curr_p = float(s.get("current_price", 100.0))
-                    day_chg_pct = float(s.get("day_change_pct", 0.0))
-                    day_chg = float(s.get("day_change", 0.0))
-                    h52 = float(s.get("high_52w", curr_p * 1.25))
-                    l52 = float(s.get("low_52w", curr_p * 0.75))
-
-                    latest_map[sym] = {
-                        "symbol": sym,
-                        "base_symbol": base_sym,
-                        "company_name": name,
-                        "sector": s.get("sector", "Diversified"),
-                        "current_price": curr_p,
-                        "day_change": day_chg,
-                        "day_change_pct": day_chg_pct,
-                        "open": float(s.get("open", curr_p)),
-                        "high": float(s.get("high", curr_p * 1.01)),
-                        "low": float(s.get("low", curr_p * 0.99)),
-                        "volume": int(s.get("volume", 500000)),
-                        "high_52w": h52,
-                        "low_52w": l52,
-                        "pct_from_52w_high": float(s.get("pct_from_52w_high", -10.0)),
-                        "market_cap_category": s.get("market_cap_category", "Mid Cap"),
-                    }
-                self._latest_stock_cache = latest_map
-                return
-            except Exception as exc:
-                print(f"[ReferenceMarketProvider] Error loading snapshot JSON: {exc}")
 
         # 3. Deterministic Fallback catalog synthesis if snapshot or parquet not found
         fallback_map = {}
