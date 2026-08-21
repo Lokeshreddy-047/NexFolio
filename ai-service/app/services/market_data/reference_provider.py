@@ -157,30 +157,31 @@ class ReferenceMarketProvider(MarketDataProvider):
             except Exception as exc:
                 print(f"[ReferenceMarketProvider] Error loading snapshot JSON: {exc}")
 
-        # 3. Dynamic Fallback catalog synthesis if files not found
+        # 3. Deterministic Fallback catalog synthesis if snapshot or parquet not found
         fallback_map = {}
         for s in stock_catalog:
             sym = s["symbol"]
             curr_p = float(s.get("reference_price", 500.0))
-            h_sym = abs(hash(sym))
-            day_chg_pct = round(((h_sym % 500) - 250) / 100.0, 2)
+            if curr_p <= 0.0:
+                curr_p = 500.0
+            day_chg_pct = 0.45
             day_chg = round(curr_p * (day_chg_pct / 100.0), 2)
-            h52 = round(curr_p * 1.28, 2)
-            l52 = round(curr_p * 0.72, 2)
+            h52 = round(curr_p * 1.25, 2)
+            l52 = round(curr_p * 0.75, 2)
             pct_from_high = round(((curr_p - h52) / h52 * 100.0), 2)
 
             fallback_map[sym] = {
                 "symbol": sym,
-                "base_symbol": s["base_symbol"],
-                "company_name": s["company_name"],
-                "sector": s["sector"],
+                "base_symbol": s.get("base_symbol", sym.replace(".NS", "")),
+                "company_name": s.get("company_name", POPULAR_NAMES.get(sym, f"{sym} Ltd")),
+                "sector": s.get("sector", "Diversified"),
                 "current_price": curr_p,
                 "day_change": day_chg,
                 "day_change_pct": day_chg_pct,
                 "open": round(curr_p - (day_chg * 0.5), 2),
-                "high": round(curr_p + abs(day_chg * 0.8) + 1.0, 2),
-                "low": round(curr_p - abs(day_chg * 0.8) - 1.0, 2),
-                "volume": 350000 + (h_sym % 1500000),
+                "high": round(curr_p + abs(day_chg * 0.8) + 0.5, 2),
+                "low": round(curr_p - abs(day_chg * 0.8) - 0.5, 2),
+                "volume": 850000,
                 "high_52w": h52,
                 "low_52w": l52,
                 "pct_from_52w_high": pct_from_high,
@@ -237,34 +238,34 @@ class ReferenceMarketProvider(MarketDataProvider):
             MarketIndex(
                 symbol="^NSEI",
                 name="NIFTY 50 Benchmark",
-                current_level=24287.65,
-                day_change=-78.35,
-                day_change_pct=-0.32,
-                sparkline=[24350.0, 24320.0, 24290.0, 24310.0, 24260.0, 24287.65]
+                current_level=24252.00,
+                day_change=173.70,
+                day_change_pct=0.72,
+                sparkline=[24080.0, 24120.0, 24190.0, 24210.0, 24240.0, 24252.00]
             ),
             MarketIndex(
                 symbol="^BSESN",
                 name="BSE SENSEX",
-                current_level=77728.16,
-                day_change=-281.09,
-                day_change_pct=-0.36,
-                sparkline=[78000.0, 77920.0, 77810.0, 77850.0, 77700.0, 77728.16]
+                current_level=77540.83,
+                day_change=631.13,
+                day_change_pct=0.82,
+                sparkline=[76950.0, 77120.0, 77310.0, 77450.0, 77500.0, 77540.83]
             ),
             MarketIndex(
                 symbol="^NSEBANK",
                 name="NIFTY Bank Index",
-                current_level=57497.80,
-                day_change=6.70,
-                day_change_pct=0.01,
-                sparkline=[57400.0, 57450.0, 57420.0, 57510.0, 57480.0, 57497.80]
+                current_level=57761.95,
+                day_change=522.15,
+                day_change_pct=0.91,
+                sparkline=[57250.0, 57350.0, 57520.0, 57610.0, 57700.0, 57761.95]
             ),
             MarketIndex(
                 symbol="^CNXIT",
                 name="NIFTY IT Sector",
-                current_level=30807.80,
-                day_change=-549.95,
-                day_change_pct=-1.75,
-                sparkline=[31300.0, 31200.0, 31050.0, 30950.0, 30880.0, 30807.80]
+                current_level=30532.25,
+                day_change=99.15,
+                day_change_pct=0.33,
+                sparkline=[30440.0, 30480.0, 30500.0, 30520.0, 30510.0, 30532.25]
             ),
         ]
 

@@ -64,13 +64,14 @@ export function MarketTicker() {
   const tickerItems: TickerItem[] = useMemo(() => {
     if (!overview) {
       return [
-        { symbol: "NIFTY 50", rawSymbol: "^NSEI", name: "NSE Benchmark", price: "24,125.00", numericPrice: 24125.0, change: "+0.52%", dayChangePct: 0.52, isUp: true, isIndex: true },
-        { symbol: "SENSEX", rawSymbol: "^BSESN", name: "BSE Benchmark", price: "79,480.00", numericPrice: 79480.0, change: "+0.45%", dayChangePct: 0.45, isUp: true, isIndex: true },
-        { symbol: "BANKNIFTY", rawSymbol: "^NSEBANK", name: "Banking Index", price: "51,200.00", numericPrice: 51200.0, change: "-0.18%", dayChangePct: -0.18, isUp: false, isIndex: true },
-        { symbol: "RELIANCE", rawSymbol: "RELIANCE.NS", name: "Reliance Ind", price: "₹1,345.50", numericPrice: 1345.5, change: "+1.14%", dayChangePct: 1.14, isUp: true },
-        { symbol: "TCS", rawSymbol: "TCS.NS", name: "Tata Consultancy", price: "₹3,890.00", numericPrice: 3890.0, change: "-0.51%", dayChangePct: -0.51, isUp: false },
-        { symbol: "HDFCBANK", rawSymbol: "HDFCBANK.NS", name: "HDFC Bank", price: "₹1,720.00", numericPrice: 1720.0, change: "+0.70%", dayChangePct: 0.70, isUp: true },
-        { symbol: "INFY", rawSymbol: "INFY.NS", name: "Infosys Ltd", price: "₹1,850.50", numericPrice: 1850.5, change: "+1.40%", dayChangePct: 1.40, isUp: true },
+        { symbol: "NIFTY 50", rawSymbol: "^NSEI", name: "NSE Benchmark", price: "24,252.00", numericPrice: 24252.0, change: "+0.72%", dayChangePct: 0.72, isUp: true, isIndex: true },
+        { symbol: "SENSEX", rawSymbol: "^BSESN", name: "BSE Benchmark", price: "77,540.83", numericPrice: 77540.83, change: "+0.82%", dayChangePct: 0.82, isUp: true, isIndex: true },
+        { symbol: "BANKNIFTY", rawSymbol: "^NSEBANK", name: "Banking Index", price: "57,761.95", numericPrice: 57761.95, change: "+0.91%", dayChangePct: 0.91, isUp: true, isIndex: true },
+        { symbol: "NIFTY IT", rawSymbol: "^CNXIT", name: "IT Sector", price: "30,532.25", numericPrice: 30532.25, change: "+0.33%", dayChangePct: 0.33, isUp: true, isIndex: true },
+        { symbol: "RELIANCE", rawSymbol: "RELIANCE.NS", name: "Reliance Ind", price: "₹1,316.00", numericPrice: 1316.0, change: "+0.21%", dayChangePct: 0.21, isUp: true },
+        { symbol: "TCS", rawSymbol: "TCS.NS", name: "Tata Consultancy", price: "₹2,302.00", numericPrice: 2302.0, change: "+0.17%", dayChangePct: 0.17, isUp: true },
+        { symbol: "HDFCBANK", rawSymbol: "HDFCBANK.NS", name: "HDFC Bank", price: "₹726.95", numericPrice: 726.95, change: "+0.26%", dayChangePct: 0.26, isUp: true },
+        { symbol: "INFY", rawSymbol: "INFY.NS", name: "Infosys Ltd", price: "₹1,121.00", numericPrice: 1121.0, change: "-0.80%", dayChangePct: -0.80, isUp: false },
       ];
     }
 
