@@ -58,7 +58,8 @@ class Settings(BaseSettings):
         for d in defaults:
             if d not in origins:
                 origins.append(d)
-        return origins
+        # In production, never permit wildcard "*"
+        return [o for o in origins if o != "*"]
 
     model_config = SettingsConfigDict(
         env_file=".env",
