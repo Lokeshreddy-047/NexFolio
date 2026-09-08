@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,6 +9,10 @@ class Settings(BaseSettings):
 
     frontend_url: str = "http://localhost:3000"
     frontend_urls: str = ""
+    allowed_origins_raw: str = Field(
+        default="http://localhost:3000,http://127.0.0.1:3000,https://nexfolio.vercel.app,https://nexfolio-eta.vercel.app",
+        alias="allowed_origins"
+    )
 
     xgboost_model_path: str = "ml/models/xgboost_risk_model.pkl"
     shap_explainer_path: str = "ml/models/shap_explainer.pkl"
@@ -32,9 +37,28 @@ class Settings(BaseSettings):
 
     @property
     def allowed_origins(self) -> list[str]:
-        raw_value = self.frontend_urls or self.frontend_url
-        origins = [part.strip() for part in raw_value.split(",") if part.strip()]
-        return origins or [self.frontend_url]
+        raw_candidates = [
+            self.allowed_origins_raw,
+            self.frontend_urls,
+            self.frontend_url,
+        ]
+        origins: list[str] = []
+        for raw in raw_candidates:
+            if raw:
+                for part in raw.split(","):
+                    cleaned = part.strip().rstrip("/")
+                    if cleaned and cleaned not in origins:
+                        origins.append(cleaned)
+        defaults = [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "https://nexfolio.vercel.app",
+            "https://nexfolio-eta.vercel.app",
+        ]
+        for d in defaults:
+            if d not in origins:
+                origins.append(d)
+        return origins
 
     model_config = SettingsConfigDict(
         env_file=".env",

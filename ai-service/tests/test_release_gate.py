@@ -204,21 +204,50 @@ def test_gate_07_production_mock_token_lockdown():
 @pytest.mark.asyncio
 async def test_gate_08_cors_unauthorized_origin_rejection(mock_db):
     """
-    Gate 8: CORS Unauthorized Origin.
-    Verifies that an unauthorized origin (e.g. https://evil-attacker.com) does not receive allow headers.
+    Gate 8: CORS Origin Security & Legitimacy Verification.
+    Verifies that:
+    1. Unauthorized origins (e.g. https://evil-attacker.com) are rejected without allow headers.
+    2. Legitimate production Vercel origins (e.g. https://nexfolio-eta.vercel.app) receive 200 and allow headers.
+    3. Legitimate preview Vercel domains receive 200 and allow headers.
     """
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        res = await client.options(
+        # 1. Unauthorized origin rejection
+        res_evil = await client.options(
             "/api/v1/health",
             headers={
                 "Origin": "https://evil-attacker.com",
                 "Access-Control-Request-Method": "GET"
             }
         )
-        allow_origin = res.headers.get("access-control-allow-origin")
+        allow_origin = res_evil.headers.get("access-control-allow-origin")
         assert allow_origin != "https://evil-attacker.com"
         assert allow_origin != "*"
+
+        # 2. Legitimate production Vercel domain allowance
+        res_eta = await client.options(
+            "/api/v1/health",
+            headers={
+                "Origin": "https://nexfolio-eta.vercel.app",
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "authorization,content-type"
+            }
+        )
+        assert res_eta.status_code == 200
+        assert res_eta.headers.get("access-control-allow-origin") == "https://nexfolio-eta.vercel.app"
+        assert res_eta.headers.get("access-control-allow-credentials") == "true"
+
+        # 3. Legitimate preview Vercel domain allowance
+        res_preview = await client.options(
+            "/api/v1/health",
+            headers={
+                "Origin": "https://nexfolio-git-preview.vercel.app",
+                "Access-Control-Request-Method": "GET"
+            }
+        )
+        assert res_preview.status_code == 200
+        assert res_preview.headers.get("access-control-allow-origin") == "https://nexfolio-git-preview.vercel.app"
+
 
 
 @pytest.mark.asyncio

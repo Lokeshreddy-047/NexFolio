@@ -25,6 +25,6 @@ services:
       - key: MARKET_DATA_PROVIDER
         value: reference
       - key: ALLOWED_ORIGINS
-        value: "https://nexfolio.vercel.app,http://localhost:3000"
+        value: "https://nexfolio-eta.vercel.app,https://nexfolio.vercel.app,http://localhost:3000"
       - key: FIREBASE_PROJECT_ID
         sync: false

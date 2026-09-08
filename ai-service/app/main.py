@@ -56,6 +56,7 @@ app.add_middleware(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins if settings.allowed_origins != ["*"] else ["*"],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True if settings.allowed_origins != ["*"] else False,
     allow_methods=["*"],
     allow_headers=["*"],
