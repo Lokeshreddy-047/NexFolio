@@ -75,3 +75,12 @@ ai-service/ml/reports/
 # =========================
 ai-service/**/__pycache__/
 .vercel
+
+# =========================
+# Academic Presentations & Binaries
+# =========================
+*.pptx
+*.ppt
+*.pdf
+!docs/**/*.pdf
+
