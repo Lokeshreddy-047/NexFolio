@@ -60,7 +60,7 @@ async def recent_predictions(
             response.append({
                 "prediction_id": str(doc["_id"]),
                 "portfolio_id": doc.get("portfolio_id", "UNKNOWN"),
-                "risk_category": doc.get("risk_category", "MEDIUM"),
+                "risk_category": doc.get("risk_category", "MODERATE"),
                 "confidence": doc.get("confidence", 0.0),
                 "created_at": doc.get("created_at")
             })

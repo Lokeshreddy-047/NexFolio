@@ -37,7 +37,8 @@ services:
     environment:
       - ENVIRONMENT=production
       - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017}
-      - MONGODB_DB_NAME=${DATABASE_NAME:-nexfolio}
+      - MONGODB_DATABASE=${MONGODB_DATABASE:-${DATABASE_NAME:-nexfolio}}
+      - MONGODB_DB_NAME=${MONGODB_DATABASE:-${DATABASE_NAME:-nexfolio}}
       - ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost
       - MARKET_DATA_MODE=${MARKET_DATA_MODE:-reference}
       - MARKET_DATA_PROVIDER=${MARKET_DATA_PROVIDER:-reference}

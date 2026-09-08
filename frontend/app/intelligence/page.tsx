@@ -1,12 +1,18 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth-provider";
+import { useToast } from "@/components/toast-provider";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
 import { MotionContainer } from "@/components/ui/motion";
 import {
   getPortfolioIntelligence,
   simulateWhatIfRisk,
+  savePrediction,
+  getPredictionHistory,
+  PredictionHistoryItem,
   PortfolioIntelligenceResponse,
   WhatIfSimulationResponse,
   PortfolioSummary,
@@ -29,16 +35,37 @@ import {
   History,
   HelpCircle,
   BarChart3,
-  Check
+  Check,
+  X,
+  BookmarkCheck,
+  Clock
 } from "lucide-react";
 import { DataPedigreeBadge } from "@/components/data-badge";
 
 export default function IntelligencePage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const toast = useToast();
+
   const [portfolios, setPortfolios] = useState<PortfolioSummary[]>([]);
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>("");
   const [intelligence, setIntelligence] = useState<PortfolioIntelligenceResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Prediction History Drawer state (FIX-15)
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [predictionHistory, setPredictionHistory] = useState<PredictionHistoryItem[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [savingPrediction, setSavingPrediction] = useState(false);
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Authentication guard (FIX-14)
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/login");
+    }
+  }, [user, authLoading, router]);
 
   // Recommendations filter
   const [recFilter, setRecFilter] = useState<string>("ALL");
@@ -88,8 +115,57 @@ export default function IntelligencePage() {
   }, []);
 
   useEffect(() => {
-    loadPortfolios();
-  }, [loadPortfolios]);
+    if (user) {
+      loadPortfolios();
+    }
+  }, [user, loadPortfolios]);
+
+  // Save current evaluation to prediction history (FIX-15)
+  const handleSaveEvaluation = async () => {
+    if (!selectedPortfolioId || !intelligence) return;
+    try {
+      setSavingPrediction(true);
+      const m = intelligence.quantitative_metrics;
+      const portfolioData: Record<string, number> = {
+        annualized_return: m.annualized_return,
+        annualized_volatility: m.annualized_volatility,
+        portfolio_beta: m.portfolio_beta,
+        portfolio_sharpe_ratio: m.portfolio_sharpe_ratio,
+        portfolio_sortino_ratio: m.portfolio_sortino_ratio,
+        portfolio_calmar_ratio: m.portfolio_calmar_ratio,
+        portfolio_max_drawdown: m.portfolio_max_drawdown,
+        asset_count: m.asset_count,
+        sector_count: m.sector_count,
+        diversification_score: m.diversification_score,
+      };
+
+      await savePrediction({
+        portfolio_id: selectedPortfolioId,
+        portfolio_data: portfolioData,
+      });
+
+      setSavedSuccess(true);
+      toast.success("Saved!", "Risk evaluation archived to prediction history.");
+      setTimeout(() => setSavedSuccess(false), 3000);
+    } catch (err: unknown) {
+      toast.error("Save Failed", err instanceof Error ? err.message : "Failed to archive evaluation.");
+    } finally {
+      setSavingPrediction(false);
+    }
+  };
+
+  const handleOpenHistory = async () => {
+    setHistoryOpen(true);
+    try {
+      setLoadingHistory(true);
+      const items = await getPredictionHistory();
+      setPredictionHistory(items);
+    } catch (err: unknown) {
+      toast.error("Error", err instanceof Error ? err.message : "Failed to load prediction history.");
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
   // 2. Fetch Intelligence when Selected Portfolio Changes
   const loadIntelligence = useCallback(async (portId: string) => {
@@ -270,14 +346,44 @@ export default function IntelligencePage() {
               )}
             </div>
 
-            <button
-              onClick={() => loadIntelligence(selectedPortfolioId)}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-slate-200 text-xs font-bold border border-white/[0.1] transition-all self-start md:self-auto active:scale-95 shadow-sm"
-            >
-              <RefreshCw size={14} className={loading ? "animate-spin text-emerald-400" : "text-emerald-400"} />
-              Re-Analyze Portfolio
-            </button>
+            <div className="flex items-center gap-2 self-start md:self-auto">
+              <button
+                onClick={handleSaveEvaluation}
+                disabled={savingPrediction || !intelligence}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 text-xs font-bold border border-emerald-500/30 transition-all active:scale-95 shadow-sm disabled:opacity-50"
+                title="Save current risk evaluation to prediction history"
+              >
+                {savedSuccess ? (
+                  <>
+                    <Check size={14} className="text-emerald-400" />
+                    <span>Saved</span>
+                  </>
+                ) : (
+                  <>
+                    <BookmarkCheck size={14} className={savingPrediction ? "animate-spin text-emerald-400" : "text-emerald-400"} />
+                    <span>{savingPrediction ? "Saving..." : "Save Evaluation"}</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={handleOpenHistory}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 text-xs font-bold border border-indigo-500/30 transition-all active:scale-95 shadow-sm"
+                title="View past prediction evaluations"
+              >
+                <History size={14} className="text-indigo-400" />
+                <span>History</span>
+              </button>
+
+              <button
+                onClick={() => loadIntelligence(selectedPortfolioId)}
+                disabled={loading}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-slate-200 text-xs font-bold border border-white/[0.1] transition-all active:scale-95 shadow-sm"
+              >
+                <RefreshCw size={14} className={loading ? "animate-spin text-emerald-400" : "text-emerald-400"} />
+                Re-Analyze
+              </button>
+            </div>
           </div>
 
           {/* Loading / Error States */}
@@ -895,6 +1001,99 @@ export default function IntelligencePage() {
           </MotionContainer>
         </main>
       </div>
+
+      {/* Prediction History Slide-over Drawer (FIX-15) */}
+      {historyOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
+            onClick={() => setHistoryOpen(false)}
+          />
+          <div className="relative w-full max-w-md bg-[#0b0f19] border-l border-white/[0.1] p-6 shadow-2xl overflow-y-auto flex flex-col justify-between z-10">
+            <div>
+              <div className="flex items-center justify-between pb-4 border-b border-white/[0.1]">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-400">
+                    <History size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-white">Prediction History</h3>
+                    <p className="text-[11px] text-slate-400">Archived AI risk evaluations</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setHistoryOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {loadingHistory ? (
+                  <div className="py-12 flex flex-col items-center justify-center gap-2 text-slate-400">
+                    <RefreshCw size={20} className="animate-spin text-indigo-400" />
+                    <span className="text-xs">Loading archived evaluations...</span>
+                  </div>
+                ) : predictionHistory.length === 0 ? (
+                  <div className="py-16 text-center space-y-2">
+                    <p className="text-xs font-bold text-slate-300">No evaluations saved yet</p>
+                    <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                      Click &quot;Save Evaluation&quot; on any portfolio analysis to archive its risk state to MongoDB.
+                    </p>
+                  </div>
+                ) : (
+                  predictionHistory.map((item) => {
+                    const badge = getRiskBadge(item.risk_category);
+                    const Icon = badge.icon;
+                    const dateStr = item.created_at ? new Date(item.created_at).toLocaleString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit"
+                    }) : "Recent";
+
+                    return (
+                      <div
+                        key={item.prediction_id}
+                        className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-white/[0.15] transition-all space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black border flex items-center gap-1.5 ${badge.bg}`}>
+                            <Icon size={12} />
+                            {badge.label}
+                          </span>
+                          <span className="text-[11px] font-bold text-slate-400">
+                            {(item.confidence * 100).toFixed(1)}% Conf.
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-white/[0.04]">
+                          <span className="font-mono text-[10px] text-slate-500">ID: {item.prediction_id.slice(-8)}</span>
+                          <span className="flex items-center gap-1 text-[10px]">
+                            <Clock size={10} className="text-slate-500" />
+                            {dateStr}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-white/[0.08] text-center">
+              <button
+                onClick={() => setHistoryOpen(false)}
+                className="w-full py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs font-bold text-slate-300 transition-colors"
+              >
+                Close Drawer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

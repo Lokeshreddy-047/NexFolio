@@ -240,7 +240,7 @@ export default function LoginPage() {
     {
       icon: <BrainCircuit size={18} />,
       title: "TreeSHAP ML Risk & Explainability Engine",
-      badge: "97% ACCURACY",
+      badge: "91.0% ACCURACY",
       desc: "XGBoost classifier with O(TLD²) game-theoretic feature attributions for transparent portfolio risk verdicts.",
       accent: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
     },

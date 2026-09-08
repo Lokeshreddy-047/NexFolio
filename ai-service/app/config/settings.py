@@ -19,7 +19,8 @@ class Settings(BaseSettings):
     firebase_project_id: str = "nexfolio-pid37"
     firebase_credentials_path: str = ""
     firebase_credentials_json: str = ""
-    dev_auth_enabled: bool = True
+    environment: str = "production"
+    dev_auth_enabled: bool = False
 
     # Market Data Feed Layer
     market_data_mode: str = "live"

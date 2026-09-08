@@ -187,7 +187,7 @@ export function MarketTicker() {
         <div className="flex items-center gap-1.5 text-indigo-400 font-semibold">
           <Sparkles size={13} className="text-indigo-400 animate-pulse" />
           <span className="font-mono text-[10px] tracking-wide uppercase bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
-            TreeSHAP 97% Acc
+            TreeSHAP 91.0% Acc
           </span>
         </div>
       </div>

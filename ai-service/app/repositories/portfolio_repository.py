@@ -79,9 +79,13 @@ async def delete_portfolio(portfolio_id: str, user_id: str) -> bool:
         db = get_database()
         res = await db.portfolios.delete_one(_to_id_query(portfolio_id, user_id))
         if res.deleted_count > 0:
-            # Cascade delete holdings and transactions
+            # Cascade delete holdings, transactions, snapshots, predictions, reports, and notifications
             await db.holdings.delete_many({"portfolio_id": portfolio_id, "user_id": user_id})
             await db.transactions.delete_many({"portfolio_id": portfolio_id, "user_id": user_id})
+            await db.portfolio_snapshots.delete_many({"portfolio_id": portfolio_id, "user_id": user_id})
+            await db.predictions.delete_many({"portfolio_id": portfolio_id, "user_id": user_id})
+            await db.portfolio_reports.delete_many({"portfolio_id": portfolio_id, "user_id": user_id})
+            await db.notifications.delete_many({"portfolio_id": portfolio_id, "user_id": user_id})
             return True
         return False
     except Exception as exc:

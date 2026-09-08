@@ -3,7 +3,7 @@ import pandas as pd
 from pathlib import Path
 
 from app.services.model_loader import get_model, get_feature_metadata
-from app.services.prediction_service import predict_portfolio_risk
+from app.services.prediction_service import predict_portfolio_risk, resolve_feature_value
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -26,11 +26,7 @@ def explain_portfolio_risk(portfolio_data: dict) -> dict:
     explainer = get_explainer()
 
     feature_order = metadata["feature_names"]
-
-    row = {}
-    for feature in feature_order:
-        row[feature] = portfolio_data.get(feature, 0.0)
-
+    row = {feature: resolve_feature_value(feature, portfolio_data) for feature in feature_order}
     df = pd.DataFrame([row], columns=feature_order)
 
     prediction_result = predict_portfolio_risk(portfolio_data)

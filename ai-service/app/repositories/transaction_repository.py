@@ -38,6 +38,7 @@ async def record_transaction(user_id: str, data: dict) -> dict:
 
     tx_date = data.get("transaction_date") or now
 
+    realized_pnl_tx = 0.0
     # 1. Update holdings balance
     if tx_type == "BUY":
         await apply_buy_transaction(
@@ -51,7 +52,7 @@ async def record_transaction(user_id: str, data: dict) -> dict:
             company_name=company_name
         )
     elif tx_type in ("SELL", "BUYBACK"):
-        await apply_sell_transaction(
+        _, realized_pnl_tx = await apply_sell_transaction(
             user_id=user_id,
             portfolio_id=portfolio_id,
             symbol=resolved_symbol,
@@ -69,6 +70,7 @@ async def record_transaction(user_id: str, data: dict) -> dict:
         "quantity": qty,
         "price": price,
         "total_amount": total_amount,
+        "realized_pnl": round(realized_pnl_tx, 2),
         "asset_type": asset_type,
         "sector": sector,
         "transaction_date": tx_date,
@@ -134,8 +136,137 @@ async def get_transactions_by_user(
 async def delete_transaction(transaction_id: str, user_id: str) -> bool:
     try:
         db = get_database()
-        res = await db.transactions.delete_one(_to_id_query(transaction_id, user_id))
-        return res.deleted_count > 0
+        tx = await db.transactions.find_one(_to_id_query(transaction_id, user_id))
+        if not tx:
+            return False
+
+        portfolio_id = tx.get("portfolio_id")
+        symbol = tx.get("symbol")
+        tx_type = tx.get("transaction_type", "BUY").upper()
+        qty = float(tx.get("quantity", 0.0))
+        price = float(tx.get("price", 0.0))
+
+        # Revert holding quantity and portfolio P&L
+        if tx_type == "BUY":
+            holding = await db.holdings.find_one({
+                "portfolio_id": portfolio_id,
+                "user_id": user_id,
+                "symbol": symbol
+            })
+            if not holding:
+                # No holding exists; deleting a BUY when no holding exists violates ledger integrity
+                print(f"[transaction_repository] Cannot delete BUY: no holding exists for {symbol}")
+                return False
+
+            current_qty = float(holding.get("quantity", 0.0))
+            if current_qty < (qty - 1e-6):
+                # Cannot delete BUY: subsequent SELL transactions depended on these shares
+                print(
+                    f"[transaction_repository] Cannot delete BUY: remaining holding quantity "
+                    f"({current_qty}) is less than transaction quantity ({qty})"
+                )
+                return False
+
+            new_qty = round(current_qty - qty, 4)
+            if new_qty <= 0:
+                await db.holdings.delete_one({"_id": holding["_id"]})
+            else:
+                # Recalculate average buy price from remaining BUY transactions
+                remaining_buys = await db.transactions.find({
+                    "portfolio_id": portfolio_id,
+                    "user_id": user_id,
+                    "symbol": symbol,
+                    "transaction_type": "BUY",
+                    "_id": {"$ne": tx["_id"]}
+                }).to_list(1000)
+                if remaining_buys:
+                    tot_q = sum(float(b.get("quantity", 0)) for b in remaining_buys)
+                    tot_c = sum(float(b.get("quantity", 0)) * float(b.get("price", 0)) for b in remaining_buys)
+                    recalculated_avg = (tot_c / tot_q) if tot_q > 0 else float(holding.get("avg_buy_price", 0.0))
+                else:
+                    recalculated_avg = float(holding.get("avg_buy_price", 0.0))
+                await db.holdings.update_one(
+                    {"_id": holding["_id"]},
+                    {"$set": {
+                        "quantity": new_qty,
+                        "avg_buy_price": round(recalculated_avg, 2),
+                        "updated_at": datetime.now(timezone.utc)
+                    }}
+                )
+        elif tx_type in ("SELL", "BUYBACK"):
+            holding = await db.holdings.find_one({
+                "portfolio_id": portfolio_id,
+                "user_id": user_id,
+                "symbol": symbol
+            })
+            recorded_pnl = tx.get("realized_pnl")
+            if holding:
+                avg_buy = float(holding.get("avg_buy_price", 0.0))
+                realized_pnl = float(recorded_pnl) if recorded_pnl is not None else (price - avg_buy) * qty
+                new_qty = float(holding.get("quantity", 0.0)) + qty
+                await db.holdings.update_one(
+                    {"_id": holding["_id"]},
+                    {"$set": {
+                        "quantity": new_qty,
+                        "updated_at": datetime.now(timezone.utc)
+                    }}
+                )
+            else:
+                # Holding was fully liquidated; restore position
+                buys = await db.transactions.find({
+                    "portfolio_id": portfolio_id,
+                    "user_id": user_id,
+                    "symbol": symbol,
+                    "transaction_type": "BUY"
+                }).to_list(100)
+                if buys:
+                    tot_q = sum(float(b.get("quantity", 0)) for b in buys)
+                    tot_c = sum(float(b.get("quantity", 0)) * float(b.get("price", 0)) for b in buys)
+                    avg_buy = (tot_c / tot_q) if tot_q > 0 else price
+                else:
+                    avg_buy = price
+                realized_pnl = float(recorded_pnl) if recorded_pnl is not None else (price - avg_buy) * qty
+                await db.holdings.insert_one({
+                    "user_id": user_id,
+                    "portfolio_id": portfolio_id,
+                    "symbol": symbol,
+                    "company_name": tx.get("company_name", symbol),
+                    "asset_type": tx.get("asset_type", "Equity"),
+                    "sector": tx.get("sector", "Other"),
+                    "quantity": qty,
+                    "avg_buy_price": round(avg_buy, 2),
+                    "current_price": price,
+                    "created_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(timezone.utc)
+                })
+
+            # Revert realized P&L on portfolio
+            port_query = _to_id_query(portfolio_id, user_id)
+            await db.portfolios.update_one(
+                port_query,
+                {"$inc": {"realized_pnl": -round(realized_pnl, 2)}}
+            )
+
+        res = await db.transactions.delete_one({"_id": tx["_id"]})
+        if res.deleted_count > 0:
+            try:
+                raw_holdings = await get_holdings_by_portfolio(portfolio_id, user_id)
+                _, invested, curr_val, pnl, pnl_pct = compute_holdings_metrics(raw_holdings)
+                await record_snapshot(
+                    user_id=user_id,
+                    portfolio_id=portfolio_id,
+                    data={
+                        "total_value": curr_val,
+                        "invested_capital": invested,
+                        "total_pnl": pnl,
+                        "total_roi_pct": pnl_pct,
+                        "timestamp": datetime.now(timezone.utc)
+                    }
+                )
+            except Exception as exc:
+                print(f"[transaction_repository] Post-delete snapshot warning: {exc}")
+            return True
+        return False
     except Exception as exc:
         print(f"[transaction_repository] delete_transaction warning: {exc}")
         return False

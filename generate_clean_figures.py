@@ -10,7 +10,7 @@ def generate_clean_fig1():
     steps = [
         ("1. Raw Financial Market Feeds", "OHLCV Ticks - NSE 500 Equities - Sector Indices - Upstox Stream", (59, 130, 246)),
         ("2. 36-Feature Quantitative Pipeline", "Momentum - Volatility - Downside Risk (Rf=6.5%) - Beta - 18 Sectors", (6, 182, 212)),
-        ("3. Gradient Boosted Tree Classifier", "Champion XGBoost v1.2.0 - Dual L1/L2 Regularization - 97% Accuracy", (16, 185, 129)),
+        ("3. Gradient Boosted Tree Classifier", "Champion XGBoost v1.2.0 - Dual L1/L2 Regularization - 91.0% Accuracy", (16, 185, 129)),
         ("4. Game-Theoretic Explainability", "TreeSHAP Local Attributions (phi_i) - Lundberg-Lee O(TLD^2) Time", (139, 92, 246)),
         ("5. 4-Pillar Health Scorecard & Sandbox", "0-100 Inspectable Formats - In-Memory Trade Delta Simulation", (245, 158, 11)),
         ("6. Statutory Tax Suite & Dual-Loop Engine", "Income-tax Act, 2025 - STCG 20% / LTCG 12.5% - <1ms Fast SSE Stream", (236, 72, 153))

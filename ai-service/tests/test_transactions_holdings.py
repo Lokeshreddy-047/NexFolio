@@ -85,7 +85,7 @@ def test_buy_sell_transactions_and_holdings_math(client: TestClient, user1_heade
     assert analytics_res.status_code == 200
     analytics_data = analytics_res.json()
     assert "risk_category" in analytics_data
-    assert analytics_data["risk_category"] in ["LOW", "MEDIUM", "HIGH"]
+    assert analytics_data["risk_category"] in ["LOW", "MODERATE", "HIGH"]
     assert "confidence" in analytics_data
     assert "portfolio_health_score" in analytics_data
     assert 0 <= analytics_data["portfolio_health_score"] <= 100
@@ -115,3 +115,66 @@ def test_buy_sell_transactions_and_holdings_math(client: TestClient, user1_heade
     # Check transaction ledger
     tx_list = client.get(f"/api/v1/transactions?portfolio_id={port_id}", headers=user1_headers).json()
     assert len(tx_list) == 3
+
+
+def test_transaction_deletion_and_ledger_reversal(client: TestClient, user1_headers):
+    # 1. Create portfolio
+    port_res = client.post(
+        "/api/v1/portfolios",
+        json={"name": "Reversal Test Portfolio"},
+        headers=user1_headers
+    )
+    port_id = port_res.json()["id"]
+
+    # 2. Add BUY 1: 10 shares at 100
+    b1 = client.post(
+        "/api/v1/transactions",
+        json={"portfolio_id": port_id, "symbol": "INFY.NS", "transaction_type": "BUY", "quantity": 10, "price": 100.0},
+        headers=user1_headers
+    ).json()
+    b1_id = b1["id"]
+
+    # 3. Add BUY 2: 10 shares at 200 -> avg 150
+    b2 = client.post(
+        "/api/v1/transactions",
+        json={"portfolio_id": port_id, "symbol": "INFY.NS", "transaction_type": "BUY", "quantity": 10, "price": 200.0},
+        headers=user1_headers
+    ).json()
+    b2_id = b2["id"]
+
+    h = client.get(f"/api/v1/holdings?portfolio_id={port_id}", headers=user1_headers).json()[0]
+    assert h["quantity"] == 20.0
+    assert h["avg_buy_price"] == 150.0
+
+    # 4. Delete BUY 2 -> should revert back to 10 shares at 100.0
+    del_b2 = client.delete(f"/api/v1/transactions/{b2_id}", headers=user1_headers)
+    assert del_b2.status_code == 204
+
+    h_after = client.get(f"/api/v1/holdings?portfolio_id={port_id}", headers=user1_headers).json()[0]
+    assert h_after["quantity"] == 10.0
+    assert h_after["avg_buy_price"] == 100.0
+
+    # 5. Sell 4 shares at 150 -> Realized P&L = (150 - 100) * 4 = +200
+    s1 = client.post(
+        "/api/v1/transactions",
+        json={"portfolio_id": port_id, "symbol": "INFY.NS", "transaction_type": "SELL", "quantity": 4, "price": 150.0},
+        headers=user1_headers
+    ).json()
+    s1_id = s1["id"]
+
+    h_sell = client.get(f"/api/v1/holdings?portfolio_id={port_id}", headers=user1_headers).json()[0]
+    assert h_sell["quantity"] == 6.0
+
+    port_info = client.get(f"/api/v1/portfolios/{port_id}", headers=user1_headers).json()
+    assert port_info["realized_pnl"] == 200.0
+
+    # 6. Delete the SELL -> holding quantity should restore to 10, realized_pnl to 0.0
+    del_s1 = client.delete(f"/api/v1/transactions/{s1_id}", headers=user1_headers)
+    assert del_s1.status_code == 204
+
+    h_restored = client.get(f"/api/v1/holdings?portfolio_id={port_id}", headers=user1_headers).json()[0]
+    assert h_restored["quantity"] == 10.0
+
+    port_restored = client.get(f"/api/v1/portfolios/{port_id}", headers=user1_headers).json()
+    assert port_restored["realized_pnl"] == 0.0
+

@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth-provider";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
 import { MotionContainer } from "@/components/ui/motion";
@@ -46,6 +48,8 @@ import {
 import { useToast } from "@/components/toast-provider";
 
 export default function ReportsPage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const toast = useToast();
   const [portfolios, setPortfolios] = useState<PortfolioSummary[]>([]);
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>("");
@@ -83,9 +87,18 @@ export default function ReportsPage() {
     }
   }, []);
 
+  // Authentication guard
   useEffect(() => {
-    loadPortfolios();
-  }, [loadPortfolios]);
+    if (!authLoading && !user) {
+      router.replace("/login");
+    }
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (user) {
+      loadPortfolios();
+    }
+  }, [user, loadPortfolios]);
 
   // 2. Fetch Report & Audit Logs
   const loadReport = useCallback(async (portId: string) => {

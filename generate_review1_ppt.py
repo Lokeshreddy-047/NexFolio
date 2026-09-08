@@ -295,7 +295,7 @@ def create_presentation():
 
     gap_data = [
         ("Black-Box Risk Models", "TreeSHAP Attribution Layer", "Sub-second game-theoretic risk drivers for every prediction"),
-        ("Feature Collinearity", "Dual L1 + L2 Regularization", "Prevents overfitting on correlated ratios, achieving 97% accuracy"),
+        ("Feature Collinearity", "Dual L1 + L2 Regularization", "Prevents overfitting on correlated ratios, achieving 91.0% accuracy"),
         ("Analytical Latency", "Dual-Loop Engine (<1ms SSE)", "Decouples live quote streaming from heavy persistence"),
         ("Outdated Tax Engines", "Income-tax Act, 2025 Suite", "Exact calendar-month rules, buybacks, and 8-year loss bank")
     ]
@@ -387,7 +387,7 @@ def create_presentation():
     p.space_after = Pt(6)
 
     sol_items = [
-        "Explainable ML: Regularized XGBoost (97% Acc) with game-theoretic TreeSHAP attributions.",
+        "Explainable ML: Regularized XGBoost (91.0% Acc) with game-theoretic TreeSHAP attributions.",
         "Dual-Loop Engine: Decouple <1ms live quote streaming from background deep analytics.",
         "Institutional Tax Suite: Native STCG (20%), LTCG (12.5%), and 8-year Loss Harvesting Bank."
     ]

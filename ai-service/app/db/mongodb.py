@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 MONGODB_URI = os.getenv("MONGODB_URI") or "mongodb://localhost:27017"
-DATABASE_NAME = os.getenv("MONGODB_DATABASE", "nexfolio")
+DATABASE_NAME = os.getenv("MONGODB_DATABASE") or os.getenv("MONGODB_DB_NAME") or "nexfolio"
 
 _client = None
 _database = None

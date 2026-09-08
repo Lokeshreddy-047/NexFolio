@@ -250,10 +250,10 @@ def build_complete_slide_by_slide_pdf():
             "terms": [
                 ("Logistic Regression Baseline", "Linear model achieving 78.5% accuracy with ~0.2ms latency. While interpretable, it fails to capture non-linear market co-movements."),
                 ("Deep CNN-LSTM (Base Paper)", "Hybrid deep learning model from Singh et al. (IEEE Access, 2023). Achieves 84.0% accuracy, but suffers from ~45ms latency and total black-box opacity."),
-                ("NexFolio XGBoost + TreeSHAP", "Our champion architecture achieving 97.0% accuracy, sub-millisecond (~0.9ms) inference, and exact game-theoretic feature explainability."),
+                ("NexFolio XGBoost + TreeSHAP", "Our champion architecture achieving 91.0% accuracy, sub-millisecond (~0.9ms) inference, and exact game-theoretic feature explainability."),
                 ("Feature Multi-Collinearity", "The statistical condition where financial ratios are highly correlated. Solved in NexFolio via Dual L1 (Lasso) and L2 (Ridge) regularization.")
             ],
-            "script": "\"Slide 5 illustrates the primary technical dilemma we address: As benchmarked in Figure 2, linear models like Logistic Regression achieve only 78.5% accuracy on non-linear market shocks. Deep models like CNN-LSTM achieve 84% accuracy but act as uninterpretable black-boxes with 45ms latencies. In NexFolio, our proposed regularized XGBoost with TreeSHAP achieves state-of-the-art 97% accuracy while delivering sub-millisecond (0.9ms) inference and exact game-theoretic explainability.\"",
+            "script": "\"Slide 5 illustrates the primary technical dilemma we address: As benchmarked in Figure 2, linear models like Logistic Regression achieve only 78.5% accuracy on non-linear market shocks. Deep models like CNN-LSTM achieve 84% accuracy but act as uninterpretable black-boxes with 45ms latencies. In NexFolio, our proposed regularized XGBoost with TreeSHAP achieves state-of-the-art 91.0% accuracy while delivering sub-millisecond (0.9ms) inference and exact game-theoretic explainability.\"",
             "qa": [
                 ("Why does XGBoost outperform CNN-LSTM on tabular data?", "Deep networks require massive spatial/temporal homogeneity. Tabular financial ratios lack spatial structure and have high feature noise. Regularized tree ensembles partition feature space with lower sample complexity and zero tensor latency.")
             ]

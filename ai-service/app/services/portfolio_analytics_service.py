@@ -123,9 +123,90 @@ def compute_allocations(holdings: List[HoldingResponse], total_value: float) -> 
     return asset_alloc, sector_alloc
 
 
+SECTOR_NAME_TO_FEATURE = {
+    "automobile and auto components": "sector_automobile_and_auto_components_pct",
+    "automobile": "sector_automobile_and_auto_components_pct",
+    "auto components": "sector_automobile_and_auto_components_pct",
+    "auto": "sector_automobile_and_auto_components_pct",
+    "automobiles": "sector_automobile_and_auto_components_pct",
+    "capital goods": "sector_capital_goods_pct",
+    "capital goods & engineering": "sector_capital_goods_pct",
+    "engineering": "sector_capital_goods_pct",
+    "chemicals": "sector_chemicals_pct",
+    "chemical": "sector_chemicals_pct",
+    "construction": "sector_construction_pct",
+    "infrastructure": "sector_construction_pct",
+    "construction materials": "sector_construction_materials_pct",
+    "cement": "sector_construction_materials_pct",
+    "consumer durables": "sector_consumer_durables_pct",
+    "consumer services": "sector_consumer_services_pct",
+    "retail": "sector_consumer_services_pct",
+    "fmcg": "sector_fmcg_pct",
+    "fast moving consumer goods": "sector_fmcg_pct",
+    "consumer staples": "sector_fmcg_pct",
+    "financial services": "sector_financial_services_pct",
+    "finance": "sector_financial_services_pct",
+    "banking": "sector_financial_services_pct",
+    "bank": "sector_financial_services_pct",
+    "insurance": "sector_financial_services_pct",
+    "healthcare": "sector_healthcare_pct",
+    "pharma": "sector_healthcare_pct",
+    "pharmaceuticals": "sector_healthcare_pct",
+    "information technology": "sector_information_technology_pct",
+    "it": "sector_information_technology_pct",
+    "technology": "sector_information_technology_pct",
+    "tech": "sector_information_technology_pct",
+    "metals & mining": "sector_metals_&_mining_pct",
+    "metals and mining": "sector_metals_&_mining_pct",
+    "mining": "sector_metals_&_mining_pct",
+    "metals": "sector_metals_&_mining_pct",
+    "steel": "sector_metals_&_mining_pct",
+    "oil gas & consumable fuels": "sector_oil_gas_&_consumable_fuels_pct",
+    "oil, gas & consumable fuels": "sector_oil_gas_&_consumable_fuels_pct",
+    "oil & gas": "sector_oil_gas_&_consumable_fuels_pct",
+    "oil and gas": "sector_oil_gas_&_consumable_fuels_pct",
+    "energy": "sector_oil_gas_&_consumable_fuels_pct",
+    "power": "sector_power_pct",
+    "power & energy": "sector_power_pct",
+    "utilities": "sector_power_pct",
+    "realty": "sector_realty_pct",
+    "real estate": "sector_realty_pct",
+    "services": "sector_services_pct",
+    "logistics": "sector_services_pct",
+    "telecommunication": "sector_telecommunication_pct",
+    "telecommunications": "sector_telecommunication_pct",
+    "telecom": "sector_telecommunication_pct",
+    "textiles": "sector_textiles_pct",
+    "textile": "sector_textiles_pct",
+    "apparel": "sector_textiles_pct",
+}
+
+ALL_SECTOR_FEATURES = [
+    "sector_automobile_and_auto_components_pct",
+    "sector_capital_goods_pct",
+    "sector_chemicals_pct",
+    "sector_construction_pct",
+    "sector_construction_materials_pct",
+    "sector_consumer_durables_pct",
+    "sector_consumer_services_pct",
+    "sector_fmcg_pct",
+    "sector_financial_services_pct",
+    "sector_healthcare_pct",
+    "sector_information_technology_pct",
+    "sector_metals_&_mining_pct",
+    "sector_oil_gas_&_consumable_fuels_pct",
+    "sector_power_pct",
+    "sector_realty_pct",
+    "sector_services_pct",
+    "sector_telecommunication_pct",
+    "sector_textiles_pct",
+]
+
+
 def derive_institutional_features(holdings: List[HoldingResponse], total_invested: float, total_current_value: float) -> Dict[str, float]:
     """
     Derives quantitative financial risk metrics from holdings for ML risk prediction.
+    Populates all 36 features expected by the institutional XGBoost risk classifier.
     """
     asset_count = len(holdings)
     sectors = {h.sector for h in holdings if h.sector}
@@ -156,21 +237,49 @@ def derive_institutional_features(holdings: List[HoldingResponse], total_investe
     portfolio_max_drawdown = max(-0.80, min(-0.02, -(0.05 + annualized_volatility * 0.6)))
     portfolio_calmar_ratio = max(-2.0, min(4.0, annualized_return / abs(portfolio_max_drawdown) if portfolio_max_drawdown != 0 else 1.0))
 
+    # Calculate 18 sector percentages
+    sector_percentages: Dict[str, float] = {feat: 0.0 for feat in ALL_SECTOR_FEATURES}
+    if total_current_value > 0 and holdings:
+        for h in holdings:
+            s_raw = (h.sector or "").strip().lower()
+            feat_key = SECTOR_NAME_TO_FEATURE.get(s_raw)
+            if not feat_key:
+                clean_s = s_raw.replace("-", " ").replace(",", "").replace("&", "and")
+                feat_key = SECTOR_NAME_TO_FEATURE.get(clean_s)
+            if feat_key and feat_key in sector_percentages:
+                sector_percentages[feat_key] += (h.current_value / total_current_value)
+
+    for feat in ALL_SECTOR_FEATURES:
+        sector_percentages[feat] = round(sector_percentages[feat], 4)
+
+    # 5 complementary quantitative metrics
+    trading_days = 252
+    total_return = round(unrealized_roi, 4)
+    rolling_max_drawdown_30d = round(portfolio_max_drawdown * 0.88, 4)
+    rolling_max_drawdown_252d = round(portfolio_max_drawdown, 4)
+    downside_deviation_annualized = round(annualized_volatility * 0.70, 4)
+
     return {
+        "trading_days": trading_days,
+        "total_return": total_return,
         "annualized_return": round(annualized_return, 4),
         "annualized_volatility": round(annualized_volatility, 4),
-        "portfolio_beta": round(portfolio_beta, 4),
-        "asset_count": max(1, asset_count),
-        "sector_count": max(1, sector_count),
-        "portfolio_sharpe_ratio": round(portfolio_sharpe_ratio, 4),
-        "portfolio_sortino_ratio": round(portfolio_sortino_ratio, 4),
-        "portfolio_calmar_ratio": round(portfolio_calmar_ratio, 4),
-        "diversification_score": round(diversification_score, 2),
-        "portfolio_max_drawdown": round(portfolio_max_drawdown, 4),
         "return_1M": round(annualized_return / 12.0, 4),
         "return_3M": round(annualized_return / 4.0, 4),
         "return_6M": round(annualized_return / 2.0, 4),
         "return_1Y": round(annualized_return, 4),
+        "portfolio_max_drawdown": round(portfolio_max_drawdown, 4),
+        "rolling_max_drawdown_30d": rolling_max_drawdown_30d,
+        "rolling_max_drawdown_252d": rolling_max_drawdown_252d,
+        "downside_deviation_annualized": downside_deviation_annualized,
+        "portfolio_sharpe_ratio": round(portfolio_sharpe_ratio, 4),
+        "portfolio_sortino_ratio": round(portfolio_sortino_ratio, 4),
+        "portfolio_calmar_ratio": round(portfolio_calmar_ratio, 4),
+        "asset_count": max(1, asset_count),
+        "sector_count": max(1, sector_count),
+        **sector_percentages,
+        "portfolio_beta": round(portfolio_beta, 4),
+        "diversification_score": round(diversification_score, 2),
     }
 
 

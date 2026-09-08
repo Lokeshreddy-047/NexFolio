@@ -243,7 +243,7 @@ def generate_ultimate_pdf():
             "tech_deep_dive": [
                 ("Stage 1: Raw Financial Market Feeds", "Streams live ticks (LTP, Volume, Bid/Ask) from NSE 500 equities via Upstox WebSocket APIs and Parquet reference historical data."),
                 ("Stage 2: 36-Feature Pipeline", "Computes rolling momentum, annualized volatility, downside semi-variance (Rf=6.5%), market Beta, and 18 sector concentration allocations."),
-                ("Stage 3: XGBoost Classifier", "Champion gradient boosted tree model trained with L1/L2 regularized loss, achieving 97% accuracy across Low, Medium, and High risk tiers."),
+                ("Stage 3: XGBoost Classifier", "Champion gradient boosted tree model trained with L1/L2 regularized loss, achieving 91.0% accuracy across Low, Moderate, and High risk tiers."),
                 ("Stage 4: TreeSHAP Engine", "Extracts local feature contribution vectors for every portfolio prediction, identifying top positive and negative risk contributors."),
                 ("Stage 5: 4-Pillar Scorecard & Sandbox", "Maps metrics to an inspectable 0–100 health score (Diversification, Volatility, Efficiency, Drawdown) and enables in-memory What-If trade simulations."),
                 ("Stage 6: Statutory Tax Suite & Dual-Loop", "Executes sub-millisecond live valuations via Server-Sent Events (SSE) while maintaining tax-loss harvesting banks under Income-tax Act, 2025.")
@@ -280,16 +280,16 @@ def generate_ultimate_pdf():
         {
             "num": "5",
             "name": "THE CORE CHALLENGE: Accuracy vs. Latency & XAI Benchmark (Figure 2)",
-            "layout": "Left: 4 Challenge Bullets (Opacity, Collinearity, Latency, Tax) | Right: Fig 2 Benchmark Matrix (Logistic Regression 78.5% ~0.2ms vs CNN-LSTM 84.0% ~45ms vs NexFolio XGBoost+SHAP 97.0% ~0.9ms)",
-            "eli5": "Imagine 3 cars: 1) The Old Bicycle (Logistic Regression): Very simple to understand, but too slow and weak for steep hills (78.5% accuracy). 2) The Armored Truck (CNN-LSTM): Stronger, but super heavy, slow (45ms), and has no windows so you can't see inside (Black-Box). 3) The Supercar (NexFolio XGBoost + TreeSHAP): Lightning fast (<1ms), achieves 97% accuracy, and has crystal-clear glass windows so you see everything inside!",
+            "layout": "Left: 4 Challenge Bullets (Opacity, Collinearity, Latency, Tax) | Right: Fig 2 Benchmark Matrix (Logistic Regression 78.5% ~0.2ms vs CNN-LSTM 84.0% ~45ms vs NexFolio XGBoost+SHAP 91.0% ~0.9ms)",
+            "eli5": "Imagine 3 cars: 1) The Old Bicycle (Logistic Regression): Very simple to understand, but too slow and weak for steep hills (78.5% accuracy). 2) The Armored Truck (CNN-LSTM literature benchmark): Stronger, but super heavy, slow (45ms), and has no windows so you can't see inside (Black-Box). 3) The Supercar (NexFolio XGBoost + TreeSHAP): Lightning fast (<1ms), achieves verified 91.0% accuracy, and has crystal-clear glass windows so you see everything inside!",
             "tech_deep_dive": [
                 ("Logistic Regression Baseline", "Linear classification using sigmoid link: P(y=1|x) = 1 / (1 + e^{-w^T x}). Fast (~0.2ms), but completely fails on non-linear volatility interactions (78.5% accuracy)."),
-                ("Deep CNN-LSTM (Base Paper)", "Singh et al. (IEEE Access, 2023). Uses 1D convolutional layers for spatial feature correlation and LSTM cells for temporal dependencies. Moderate accuracy (84.0%), but suffers from ~45ms tensor latency and black-box opacity."),
-                ("NexFolio XGBoost + TreeSHAP (Proposed)", "Champion gradient-boosted tree ensemble with Dual L1/L2 regularization. Achieves 97.0% test accuracy, 0.142 log loss, ~0.9ms sub-second latency, and exact game-theoretic explainability."),
+                ("Deep CNN-LSTM (Literature Comparison)", "Cited benchmark from financial literature (e.g., Singh et al., IEEE Access 2023). Uses 1D convolutional layers for spatial feature correlation and LSTM cells for temporal dependencies (~84.0% accuracy), but incurs ~45ms tensor latency and black-box opacity."),
+                ("NexFolio XGBoost + TreeSHAP (Proposed)", "Champion gradient-boosted tree ensemble with Dual L1/L2 regularization. Achieves verified 91.0% test accuracy, ~0.9ms sub-second latency, and exact game-theoretic explainability."),
                 ("Multi-Collinearity Mitigation", "Financial features like 1-month return and 3-month return are correlated. XGBoost's regularized objective function shrinks collinear weights without inflating variance.")
             ],
             "math_foundations": "XGBoost Regularized Loss: L(theta) = sum_{i=1}^{n} l(y_i, y_hat_i) + sum_{k=1}^{K} [gamma T_k + 0.5 * lambda * sum_{j=1}^{T_k} w_{jk}^2 + alpha * sum_{j=1}^{T_k} |w_{jk}|], with gamma=0.1, lambda=1.0, alpha=0.1.",
-            "script": "\"Slide 5 illustrates the primary technical dilemma we address: As benchmarked in Figure 2, linear models like Logistic Regression achieve only 78.5% accuracy on non-linear market shocks. Deep models like CNN-LSTM achieve 84% accuracy but act as uninterpretable black-boxes with 45ms latencies. In NexFolio, our proposed regularized XGBoost with TreeSHAP achieves state-of-the-art 97% accuracy while delivering sub-millisecond (0.9ms) inference and exact game-theoretic explainability.\"",
+            "script": "\"Slide 5 illustrates the primary technical dilemma we address: As benchmarked in Figure 2, linear models like Logistic Regression achieve only 78.5% accuracy on non-linear market shocks. Deep models from published literature like CNN-LSTM achieve 84% accuracy but act as uninterpretable black-boxes with 45ms latencies. In NexFolio, our proposed regularized XGBoost with TreeSHAP achieves state-of-the-art 91.0% accuracy while delivering sub-millisecond (0.9ms) inference and exact game-theoretic explainability.\"",
             "cross_exam": [
                 ("What hardware was used to benchmark the 0.9ms latency?", "Standard x86-64 Intel i7 CPU running Python 3.12 with compiled C++ XGBoost native libraries, demonstrating that NexFolio runs in sub-milliseconds without expensive GPU clusters.")
             ]
@@ -376,7 +376,7 @@ def generate_ultimate_pdf():
             "num": "10",
             "name": "CONCLUSION: Phase 1 Formulation & Future Milestones",
             "layout": "5 Concise Action Bullets: Investigate (36 Features) | Develop (XGBoost & TreeSHAP) | Formulate (4-Pillar Scorecard & Sandbox) | Implement (Dual-Loop Engine) | Integrate (Income-tax Act 2025)",
-            "eli5": "In Review 1, we finished designing all the math, tested our baseline AI models (97% accuracy), and designed our streaming architecture. In Review 2, we will connect real live market WebSockets and run stress-tests on historical market crashes!",
+            "eli5": "In Review 1, we finished designing all the math, tested our baseline AI models (91.0% accuracy), and designed our streaming architecture. In Review 2, we will connect real live market WebSockets and run stress-tests on historical market crashes!",
             "tech_deep_dive": [
                 ("Investigate", "Investigate black-box limitations in portfolio risk models and formulate an explainable 36-feature quantitative engineering pipeline."),
                 ("Develop", "Develop a high-accuracy machine learning framework combining regularized XGBoost with TreeSHAP for sub-second risk attributions."),
@@ -387,7 +387,7 @@ def generate_ultimate_pdf():
             "math_foundations": "Future Phase 2 Roadmap: Milestone 1: Upstox WebSocket integration. Milestone 2: MongoDB timeline snapshotting. Milestone 3: Backtesting across 2008 GFC and 2020 COVID market shock datasets.",
             "script": "\"In conclusion, for Review 1: We have completed a comprehensive literature survey, mathematically formulated our 36-feature quantitative pipeline, established our system architecture, and benchmarked our core models. In the subsequent phase, we will proceed with end-to-end multi-class dataset validation, live market WebSocket integration, and comprehensive stress-testing.\"",
             "cross_exam": [
-                ("What is the main takeaway for the committee today?", "Review 1 establishes our mathematical formulation, verified literature survey, and baseline architecture. We have demonstrated 97% classification accuracy and sub-millisecond XAI latency.")
+                ("What is the main takeaway for the committee today?", "Review 1 establishes our mathematical formulation, verified literature survey, and baseline architecture. We have demonstrated 91.0% classification accuracy and sub-millisecond XAI latency.")
             ]
         },
 

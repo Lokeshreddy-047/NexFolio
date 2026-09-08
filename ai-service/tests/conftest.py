@@ -11,6 +11,7 @@ if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
 from app.db.mongodb import set_database
+from app.config.settings import settings
 from app.main import app
 
 
@@ -63,18 +64,21 @@ class MockCollection:
 
     def _matches(self, doc, query):
         for k, v in query.items():
-            if k == "_id":
-                if str(doc.get("_id")) != str(v):
-                    return False
-            elif isinstance(v, dict):
-                if "$regex" in v:
+            if isinstance(v, dict):
+                if "$ne" in v:
+                    if str(doc.get(k)) == str(v["$ne"]):
+                        return False
+                elif "$regex" in v:
                     pattern = v["$regex"].lower()
                     if pattern not in str(doc.get(k, "")).lower():
                         return False
-                if "$gte" in v:
+                elif "$gte" in v:
                     doc_val = doc.get(k)
                     if doc_val is None or doc_val < v["$gte"]:
                         return False
+            elif k == "_id":
+                if str(doc.get("_id")) != str(v):
+                    return False
             else:
                 if doc.get(k) != v:
                     return False
@@ -175,6 +179,8 @@ class MockDatabase:
 
 @pytest.fixture(autouse=True)
 def mock_db():
+    settings.dev_auth_enabled = True
+    settings.environment = "test"
     db = MockDatabase()
     set_database(db)
     yield db

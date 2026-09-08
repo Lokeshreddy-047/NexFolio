@@ -47,8 +47,8 @@ def verify_firebase_token(token: str) -> dict:
 
     clean_token = token.strip()
 
-    # 1. Support test/dev mock tokens
-    if settings.dev_auth_enabled and clean_token.startswith("mock_token_"):
+    # 1. Support test/dev mock tokens strictly in non-production environments
+    if settings.dev_auth_enabled and settings.environment in ("development", "test") and clean_token.startswith("mock_token_"):
         uid = clean_token.replace("mock_token_", "")
         return {
             "uid": uid,
@@ -88,18 +88,12 @@ def verify_firebase_token(token: str) -> dict:
             decoded["uid"] = decoded.get("user_id") or decoded.get("sub")
             return decoded
 
-        # 3. Fallback: If kid is not found in certs, decode claims
-        unverified_claims = jwt.decode(clean_token, options={"verify_signature": False})
-        now = time.time()
-        if unverified_claims.get("exp") and unverified_claims["exp"] < now:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication token has expired. Please sign in again.",
-                headers={"WWW-Authenticate": "Bearer"}
-            )
-
-        unverified_claims["uid"] = unverified_claims.get("user_id") or unverified_claims.get("sub")
-        return unverified_claims
+        # If kid is not found in verified Google certificates, reject token
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication signature verification failed: unrecognized key ID.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
 
     except jwt.ExpiredSignatureError:
         raise HTTPException(

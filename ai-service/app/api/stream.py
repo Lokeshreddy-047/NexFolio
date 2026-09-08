@@ -10,6 +10,8 @@ from app.services.market_data.symbol_normalizer import SymbolNormalizer
 from app.services.market_data.market_session import get_market_session_state
 from app.services.valuation_engine import RealtimeValuationEngine, PortfolioRealtimeValuation
 from app.dependencies.auth import get_current_user, UserPrincipal
+from app.repositories.portfolio_repository import get_portfolio_by_id_and_user
+from app.repositories.holding_repository import get_holdings_by_portfolio
 from app.db.mongodb import get_database
 
 router = APIRouter()
@@ -25,16 +27,11 @@ async def get_portfolio_fast_valuation(
     Computes holding valuations, day P&L, and portfolio weights using live quote cache.
     Zero ML dependencies.
     """
-    db = get_database()
-    # Find portfolio verifying ownership
-    portfolio = await db.portfolios.find_one({"_id": portfolio_id, "user_id": current_user.uid})
-    if not portfolio:
-        portfolio = await db.portfolios.find_one({"id": portfolio_id, "user_id": current_user.uid})
+    portfolio = await get_portfolio_by_id_and_user(portfolio_id, current_user.uid)
     if not portfolio:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Portfolio not found")
 
-    cursor = db.holdings.find({"portfolio_id": portfolio_id, "user_id": current_user.uid})
-    holdings = await cursor.to_list(length=1000)
+    holdings = await get_holdings_by_portfolio(portfolio_id, current_user.uid)
 
     return await RealtimeValuationEngine.evaluate_portfolio(portfolio, holdings)
 

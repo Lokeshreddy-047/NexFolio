@@ -16,6 +16,10 @@ env/
 # =========================
 .env
 .env.*
+**/.env
+**/.env.*
+ai-service/.env
+frontend/.env.local
 
 # =========================
 # Node

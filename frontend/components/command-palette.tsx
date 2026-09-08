@@ -75,7 +75,7 @@ export function CommandPalette() {
     {
       id: "intelligence",
       title: "AI TreeSHAP Risk Engine",
-      subtitle: "Explainable machine learning risk attributions (97% Acc)",
+      subtitle: "Explainable machine learning risk attributions (91.0% Acc)",
       category: "Tools",
       icon: Sparkles,
       href: "/intelligence",

@@ -56,7 +56,7 @@ async def get_portfolio_impact_news(
     if not port:
         raise HTTPException(status_code=404, detail="Portfolio not found or access denied.")
 
-    holdings = await get_holdings_by_portfolio(portfolio_id)
+    holdings = await get_holdings_by_portfolio(portfolio_id, current_user.uid)
     symbols = [h.get("symbol", "") for h in holdings]
 
     return await news_service.get_portfolio_impact_news(

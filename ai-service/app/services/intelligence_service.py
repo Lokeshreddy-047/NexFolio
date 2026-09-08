@@ -22,13 +22,30 @@ from app.services.portfolio_analytics_service import (
 )
 from app.services.prediction_service import predict_portfolio_risk
 from app.services.explainability_service import explain_portfolio_risk
+from collections import OrderedDict
+import hashlib
 from app.services.shap_translation_service import translate_shap_drivers
 from app.repositories.snapshot_repository import get_snapshots_by_portfolio
 from app.services.market_data.manager import market_data_manager
 
-# In-memory short-lived cache for fast repeated intelligence queries
-_intelligence_cache: Dict[str, Tuple[float, PortfolioIntelligenceResponse]] = {}
+# In-memory bounded LRU cache for fast repeated intelligence queries
+_intelligence_cache: OrderedDict[str, Tuple[float, PortfolioIntelligenceResponse]] = OrderedDict()
 CACHE_TTL = 60.0  # 60 seconds
+MAX_CACHE_ENTRIES = 256
+
+
+def _compute_holdings_signature(raw_holdings: list) -> str:
+    if not raw_holdings:
+        return "empty"
+    sig_items = []
+    for h in raw_holdings:
+        sym = str(h.get("symbol", ""))
+        qty = float(h.get("quantity", 0.0))
+        price = float(h.get("avg_buy_price", 0.0))
+        sig_items.append((sym, qty, price))
+    sig_items.sort()
+    raw_str = "|".join(f"{s}:{q}:{p}" for s, q, p in sig_items)
+    return hashlib.md5(raw_str.encode("utf-8")).hexdigest()
 
 
 def _compute_health_pillars(features: dict) -> HealthScorecard:
@@ -228,13 +245,17 @@ async def generate_portfolio_intelligence(
     raw_holdings: list
 ) -> PortfolioIntelligenceResponse:
     port_id = str(portfolio_doc["_id"])
-    cache_key = f"{user_id}:{port_id}:{len(raw_holdings)}"
+    holdings_sig = _compute_holdings_signature(raw_holdings)
+    cache_key = f"{user_id}:{port_id}:{holdings_sig}"
 
     now_ts = time.time()
     if cache_key in _intelligence_cache:
         cached_time, cached_res = _intelligence_cache[cache_key]
         if now_ts - cached_time < CACHE_TTL:
+            _intelligence_cache.move_to_end(cache_key)
             return cached_res
+        else:
+            del _intelligence_cache[cache_key]
 
     # 1. Data Sufficiency Gate
     if not raw_holdings:
@@ -357,6 +378,8 @@ async def generate_portfolio_intelligence(
         ai_decision_timeline=decision_timeline
     )
 
+    if len(_intelligence_cache) >= MAX_CACHE_ENTRIES:
+        _intelligence_cache.popitem(last=False)
     _intelligence_cache[cache_key] = (now_ts, response)
     return response
 
@@ -410,6 +433,9 @@ def simulate_what_if_risk(
     sim_div = round(min(100.0, max(15.0, (1.0 - sum((v/100.0)**2 for v in normalized.values())) * 100.0 + min(active_classes * 4.0, 20.0))), 2)
 
     sim_features = {
+        **{k: current_features.get(k, 0.0) for k in current_features if k.startswith("sector_")},
+        "trading_days": 252,
+        "total_return": sim_ret,
         "annualized_return": sim_ret,
         "annualized_volatility": sim_vol,
         "portfolio_beta": sim_beta,
@@ -420,6 +446,9 @@ def simulate_what_if_risk(
         "portfolio_calmar_ratio": round(sim_ret / abs(sim_mdd), 3),
         "diversification_score": sim_div,
         "portfolio_max_drawdown": sim_mdd,
+        "rolling_max_drawdown_30d": round(sim_mdd * 0.88, 4),
+        "rolling_max_drawdown_252d": sim_mdd,
+        "downside_deviation_annualized": round(sim_vol * 0.70, 4),
         "return_1M": round(sim_ret / 12.0, 4),
         "return_3M": round(sim_ret / 4.0, 4),
         "return_6M": round(sim_ret / 2.0, 4),

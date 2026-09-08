@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
 import { Sidebar } from "@/components/sidebar";
@@ -33,9 +34,17 @@ import { useToast } from "@/components/toast-provider";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 
 export default function HoldingsPage() {
+  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const toast = useToast();
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>("");
+
+  // Authentication guard
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/login");
+    }
+  }, [user, authLoading, router]);
   const [holdings, setHoldings] = useState<HoldingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteConfirmHolding, setDeleteConfirmHolding] = useState<{ id: string; symbol: string } | null>(null);

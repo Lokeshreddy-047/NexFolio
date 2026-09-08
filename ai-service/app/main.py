@@ -1,7 +1,9 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config.settings import settings
+from app.db.mongodb import ensure_db_indexes
 from app.api.health import router as health_router
 
 from app.api.risk import router as risk_router
@@ -26,10 +28,18 @@ from app.middleware.rate_limit import SlidingWindowRateLimiter
 from app.middleware.error_handler import register_exception_handlers
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: ensure compound database indexes
+    await ensure_db_indexes()
+    yield
+
+
 app = FastAPI(
     title=settings.app_name,
     version=settings.version,
-    description="Explainable AI backend for intelligent portfolio risk profiling and investment analytics."
+    description="Explainable AI backend for intelligent portfolio risk profiling and investment analytics.",
+    lifespan=lifespan
 )
 
 # 1. Security Headers & Request ID Tracing
@@ -46,7 +56,6 @@ app.add_middleware(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins if settings.allowed_origins != ["*"] else ["*"],
-    allow_origin_regex=r"https://.*|http://localhost:.*|http://127.0.0.1:.*",
     allow_credentials=True if settings.allowed_origins != ["*"] else False,
     allow_methods=["*"],
     allow_headers=["*"],

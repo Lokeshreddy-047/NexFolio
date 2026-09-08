@@ -35,10 +35,10 @@ async def _get_user_context(user_id: Optional[str]) -> tuple[Dict[str, float], L
     holdings_weight_map: Dict[str, float] = {}
     if active_port:
         user_holdings = await get_holdings_by_portfolio(str(active_port["_id"]), user_id)
-        total_val = sum(float(h.get("quantity", 0)) * float(h.get("current_price", 0)) for h in user_holdings)
+        total_val = sum(float(h.get("quantity") or 0) * float(h.get("current_price") or 0.0) for h in user_holdings)
         for h in user_holdings:
             sym = h.get("symbol", "").upper()
-            val = float(h.get("quantity", 0)) * float(h.get("current_price", 0))
+            val = float(h.get("quantity") or 0) * float(h.get("current_price") or 0.0)
             wt = round((val / total_val * 100.0) if total_val > 0 else 0.0, 2)
             holdings_weight_map[sym] = wt
             if not sym.endswith(".NS"):

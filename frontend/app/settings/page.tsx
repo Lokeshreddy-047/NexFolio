@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
 import { useAuth } from "@/components/auth-provider";
@@ -31,9 +32,17 @@ import { DataPedigreeBadge } from "@/components/data-badge";
 import { useToast } from "@/components/toast-provider";
 
 export default function SettingsPage() {
-  const { user, signOut } = useAuth();
+  const router = useRouter();
+  const { user, loading: authLoading, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const toast = useToast();
+
+  // Authentication guard
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/login");
+    }
+  }, [user, authLoading, router]);
 
   // Profile Form
   const [displayName, setDisplayName] = useState(user?.displayName || "");

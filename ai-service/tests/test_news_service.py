@@ -48,3 +48,26 @@ async def test_portfolio_impact_news_matching():
     assert impact.total_relevant_news_count >= 2
     assert impact.overall_portfolio_sentiment == NewsSentiment.BULLISH
     assert len(impact.articles) >= 2
+
+
+def test_portfolio_news_api_endpoint(client, user1_headers):
+    # Create portfolio for user1
+    port_res = client.post(
+        "/api/v1/portfolios",
+        json={"name": "News Test Portfolio", "currency": "INR"},
+        headers=user1_headers
+    )
+    assert port_res.status_code == 201
+    port_id = port_res.json()["id"]
+
+    # Call portfolio news endpoint
+    news_res = client.get(
+        f"/api/v1/news/portfolio/{port_id}",
+        headers=user1_headers
+    )
+    assert news_res.status_code == 200
+    data = news_res.json()
+    assert data["portfolio_id"] == port_id
+    assert "overall_portfolio_sentiment" in data
+    assert "articles" in data
+

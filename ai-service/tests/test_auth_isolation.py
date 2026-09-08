@@ -17,7 +17,7 @@ def test_public_risk_prediction(client: TestClient, sample_portfolio_payload):
     assert response.status_code == 200
     data = response.json()
     assert "risk_category" in data
-    assert data["risk_category"] in ["LOW", "MEDIUM", "HIGH"]
+    assert data["risk_category"] in ["LOW", "MODERATE", "HIGH"]
     assert "confidence" in data
     assert "probabilities" in data
 
@@ -102,3 +102,41 @@ def test_user_data_isolation_between_accounts(
         # In prediction history list, Beta does NOT see Alpha's item
         beta_history = client.get("/api/v1/predictions", headers=user2_headers).json()
         assert not any(item["prediction_id"] == prediction_id for item in beta_history)
+
+
+def test_unknown_kid_rejected_without_signature_bypass(client: TestClient):
+    import jwt as pyjwt
+    # Construct a forged token with an unknown kid
+    forged_token = pyjwt.encode(
+        {"user_id": "forged_user", "sub": "forged_user", "exp": 253402300799},
+        "fake_key_secret",
+        algorithm="HS256",
+        headers={"kid": "forged_unknown_kid"}
+    )
+    res = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {forged_token}"}
+    )
+    assert res.status_code == 401
+    err_body = res.json().get("error", res.json())
+    msg = err_body.get("message", err_body.get("detail", "")).lower()
+    assert "signature verification failed" in msg or "invalid" in msg or "unrecognized key id" in msg
+
+
+def test_mock_token_rejected_when_dev_auth_disabled(client: TestClient):
+    from app.config.settings import settings
+    # Temporarily set production environment
+    original_env = settings.environment
+    original_dev = settings.dev_auth_enabled
+    try:
+        settings.environment = "production"
+        settings.dev_auth_enabled = False
+        res = client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": "Bearer mock_token_attacker"}
+        )
+        assert res.status_code == 401
+    finally:
+        settings.environment = original_env
+        settings.dev_auth_enabled = original_dev
+
