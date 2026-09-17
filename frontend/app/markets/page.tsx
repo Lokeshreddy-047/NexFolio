@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { DataPedigreeBadge } from "@/components/data-badge";
 import { useMarketFeed } from "@/lib/useMarketFeed";
+import { OrderExecutionModal } from "@/components/order-execution-modal";
 
 export default function MarketsPage() {
   const [overview, setOverview] = useState<MarketOverviewResponse | null>(null);
@@ -38,6 +39,10 @@ export default function MarketsPage() {
   const [loading, setLoading] = useState(true);
   const [stocksLoading, setStocksLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Simulated Order Execution Modal
+  const [tradeModalStock, setTradeModalStock] = useState<MarketStockItem | null>(null);
+  const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
 
   // Screener Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -530,13 +535,25 @@ export default function MarketsPage() {
 
                           {/* Action */}
                           <td className="py-3 px-4 text-center">
-                            <Link
-                              href={`/markets/${encodeURIComponent(stock.symbol)}`}
-                              className="px-3 py-1 rounded-xl bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-300 text-xs font-bold transition-all inline-flex items-center gap-1"
-                            >
-                              <Zap size={12} />
-                              Detail
-                            </Link>
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => {
+                                  setTradeModalStock(stock);
+                                  setIsTradeModalOpen(true);
+                                }}
+                                className="px-2.5 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 border border-emerald-500/30 text-[11px] font-bold transition-all inline-flex items-center gap-1"
+                                title="Execute Simulated Order"
+                              >
+                                <Zap size={11} />
+                                Trade
+                              </button>
+                              <Link
+                                href={`/markets/${encodeURIComponent(stock.symbol)}`}
+                                className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-bold transition-all inline-flex items-center gap-1"
+                              >
+                                Detail
+                              </Link>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -549,6 +566,24 @@ export default function MarketsPage() {
           </MotionContainer>
         </main>
       </div>
+
+      {/* Institutional Simulated Order Execution Modal */}
+      <OrderExecutionModal
+        isOpen={isTradeModalOpen}
+        onClose={() => {
+          setIsTradeModalOpen(false);
+          setTradeModalStock(null);
+        }}
+        onOrderSettled={() => {
+          loadMarketData();
+          loadScreenerStocks();
+        }}
+        defaultSymbol={tradeModalStock?.symbol}
+        defaultCompanyName={tradeModalStock?.company_name}
+        defaultSector={tradeModalStock?.sector}
+        defaultPrice={tradeModalStock?.current_price}
+        defaultSide="BUY"
+      />
     </div>
   );
 }

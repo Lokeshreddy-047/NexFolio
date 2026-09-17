@@ -598,6 +598,56 @@ export async function simulateWhatIfRisk(
   });
 }
 
+export interface RebalanceTradeItem {
+  action: "BUY" | "SELL" | "HOLD";
+  symbol: string;
+  company_name: string;
+  sector: string;
+  current_quantity: number;
+  target_quantity: number;
+  delta_quantity: number;
+  estimated_price: number;
+  estimated_trade_value: number;
+  current_weight_pct: number;
+  target_weight_pct: number;
+  rationale: string;
+}
+
+export interface RebalancePlanResponse {
+  portfolio_id: string;
+  portfolio_name: string;
+  objective: string;
+  current_health_score: number;
+  projected_health_score: number;
+  health_score_delta: number;
+  current_risk_category: string;
+  projected_risk_category: string;
+  current_volatility_pct: number;
+  projected_volatility_pct: number;
+  current_beta: number;
+  projected_beta: number;
+  total_portfolio_value: number;
+  capital_freed: number;
+  capital_deployed: number;
+  net_cash_impact: number;
+  trades: RebalanceTradeItem[];
+  rebalancing_notes: string;
+}
+
+export async function getPortfolioRebalancePlan(
+  portfolioId: string,
+  options?: {
+    objective?: "MAXIMIZE_HEALTH" | "LOW_RISK" | "SECTOR_BALANCED" | "TAX_AWARE";
+    max_single_weight_pct?: number;
+    max_sector_weight_pct?: number;
+  }
+): Promise<RebalancePlanResponse> {
+  return apiRequest<RebalancePlanResponse>(`/api/v1/portfolios/${portfolioId}/rebalance-plan`, {
+    method: "POST",
+    body: JSON.stringify(options || {}),
+  });
+}
+
 // NexFolio Markets & Watchlists Domain Types & API Methods
 export interface MarketIndex {
   symbol: string;

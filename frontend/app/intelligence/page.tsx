@@ -17,8 +17,12 @@ import {
   WhatIfSimulationResponse,
   PortfolioSummary,
   HealthScorePillar,
-  getPortfolios
+  getPortfolios,
+  getPortfolioRebalancePlan,
+  RebalancePlanResponse,
+  RebalanceTradeItem
 } from "@/lib/api";
+import { OrderExecutionModal } from "@/components/order-execution-modal";
 import {
   Sparkles,
   ShieldCheck,
@@ -38,7 +42,15 @@ import {
   Check,
   X,
   BookmarkCheck,
-  Clock
+  Clock,
+  Scale,
+  Target,
+  ArrowUpRight,
+  ArrowDownRight,
+  SlidersHorizontal,
+  Wallet,
+  CheckCircle2,
+  Zap
 } from "lucide-react";
 import { DataPedigreeBadge } from "@/components/data-badge";
 
@@ -95,6 +107,47 @@ export default function IntelligencePage() {
   const [simError, setSimError] = useState<string | null>(null);
 
   const totalSimPct = Object.values(simAllocations).reduce((a, b) => a + b, 0);
+
+  // AI Portfolio Rebalancer Studio State
+  const [rebalanceObjective, setRebalanceObjective] = useState<"MAXIMIZE_HEALTH" | "LOW_RISK" | "SECTOR_BALANCED" | "TAX_AWARE">("MAXIMIZE_HEALTH");
+  const [maxSingleWeight, setMaxSingleWeight] = useState<number>(18);
+  const [maxSectorWeight, setMaxSectorWeight] = useState<number>(30);
+  const [rebalancePlan, setRebalancePlan] = useState<RebalancePlanResponse | null>(null);
+  const [loadingRebalance, setLoadingRebalance] = useState(false);
+  const [rebalanceError, setRebalanceError] = useState<string | null>(null);
+  const [rebalanceTradeModal, setRebalanceTradeModal] = useState<{
+    isOpen: boolean;
+    trade?: RebalanceTradeItem;
+  }>({ isOpen: false });
+
+  const handleGenerateRebalancePlan = useCallback(async (
+    obj: "MAXIMIZE_HEALTH" | "LOW_RISK" | "SECTOR_BALANCED" | "TAX_AWARE" = rebalanceObjective,
+    singleW: number = maxSingleWeight,
+    sectorW: number = maxSectorWeight
+  ) => {
+    if (!selectedPortfolioId) return;
+    try {
+      setLoadingRebalance(true);
+      setRebalanceError(null);
+      const plan = await getPortfolioRebalancePlan(selectedPortfolioId, {
+        objective: obj,
+        max_single_weight_pct: singleW,
+        max_sector_weight_pct: sectorW
+      });
+      setRebalancePlan(plan);
+    } catch (err: unknown) {
+      setRebalanceError(err instanceof Error ? err.message : "Failed to compute portfolio rebalance plan.");
+    } finally {
+      setLoadingRebalance(false);
+    }
+  }, [selectedPortfolioId, rebalanceObjective, maxSingleWeight, maxSectorWeight]);
+
+  // Auto-generate rebalance plan on portfolio or objective change
+  useEffect(() => {
+    if (selectedPortfolioId) {
+      handleGenerateRebalancePlan(rebalanceObjective, maxSingleWeight, maxSectorWeight);
+    }
+  }, [selectedPortfolioId, rebalanceObjective, maxSingleWeight, maxSectorWeight, handleGenerateRebalancePlan]);
 
   // 1. Initial Load: Fetch Portfolios
   const loadPortfolios = useCallback(async () => {
@@ -805,7 +858,371 @@ export default function IntelligencePage() {
                 </div>
               </div>
 
-              {/* Row 5: Interactive "What-If" Portfolio Risk Simulator Sandbox */}
+              {/* Row 5: AI-Driven Portfolio Rebalancer Studio */}
+              <div className="p-6 rounded-3xl cyber-card backdrop-blur-2xl space-y-6 relative overflow-hidden border border-emerald-500/20 shadow-[0_0_30px_rgba(16,231,157,0.06)]">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,231,157,0.25)]">
+                      <Scale size={20} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-black text-white">AI-Driven Portfolio Rebalancer Studio</h3>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          Automated Trade Optimizer
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        Multi-objective engine that calculates target weights, capital reallocation, and an itemized execution schedule
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleGenerateRebalancePlan()}
+                    disabled={loadingRebalance}
+                    className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 text-xs font-bold transition-all flex items-center gap-2 self-start md:self-auto disabled:opacity-50"
+                  >
+                    <RefreshCw size={14} className={loadingRebalance ? "animate-spin text-emerald-400" : ""} />
+                    <span>Recalculate Schedule</span>
+                  </button>
+                </div>
+
+                {/* 1. Objective Selector Cards */}
+                <div className="space-y-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Select Strategic Rebalancing Objective:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {[
+                      {
+                        key: "MAXIMIZE_HEALTH" as const,
+                        title: "Health 90+ Optimizer",
+                        badge: "Recommended",
+                        desc: "Alleviates single-stock & sector concentration to push the 4-pillar scorecard above 90.",
+                        icon: Target,
+                        accent: "emerald"
+                      },
+                      {
+                        key: "LOW_RISK" as const,
+                        title: "Conservative Defense",
+                        badge: "Preservation",
+                        desc: "Trims high-beta equity positions and reallocates into defensive anchors to target LOW risk.",
+                        icon: ShieldCheck,
+                        accent: "blue"
+                      },
+                      {
+                        key: "SECTOR_BALANCED" as const,
+                        title: "Sector Equal-Weight",
+                        badge: "Diversification",
+                        desc: "Caps any sector at 25-30% to prevent cyclical over-exposure in Financials or IT.",
+                        icon: Layers,
+                        accent: "indigo"
+                      },
+                      {
+                        key: "TAX_AWARE" as const,
+                        title: "Tax-Aware Growth",
+                        badge: "ITR Efficient",
+                        desc: "Prioritizes long-term holdings for trims to minimize short-term capital gains tax (STCG).",
+                        icon: Wallet,
+                        accent: "purple"
+                      }
+                    ].map((opt) => {
+                      const isSelected = rebalanceObjective === opt.key;
+                      const Icon = opt.icon;
+                      return (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => {
+                            setRebalanceObjective(opt.key);
+                          }}
+                          className={`p-4 rounded-2xl text-left transition-all relative overflow-hidden flex flex-col justify-between border ${
+                            isSelected
+                              ? "bg-emerald-950/20 border-emerald-500/50 shadow-[0_0_20px_rgba(16,231,157,0.15)] ring-1 ring-emerald-500/40"
+                              : "bg-black/40 border-white/[0.06] hover:border-white/[0.15] hover:bg-white/[0.02]"
+                          }`}
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className={`p-1.5 rounded-lg ${isSelected ? "bg-emerald-500/20 text-emerald-300" : "bg-white/[0.04] text-slate-400"}`}>
+                                <Icon size={16} />
+                              </span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                                isSelected ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-white/[0.04] text-slate-400 border-white/[0.06]"
+                              }`}>
+                                {opt.badge}
+                              </span>
+                            </div>
+                            <h4 className="text-xs font-black text-white">{opt.title}</h4>
+                            <p className="text-[11px] text-slate-400 leading-relaxed">{opt.desc}</p>
+                          </div>
+                          {isSelected && (
+                            <div className="mt-3 flex items-center gap-1 text-[11px] font-bold text-emerald-400">
+                              <CheckCircle2 size={13} />
+                              <span>Active Objective</span>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Guardrail Constraints Sliders */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-2xl bg-black/40 border border-white/[0.06]">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="font-semibold text-slate-300">Max Single Stock Weight Cap</span>
+                      <span className="font-mono font-bold text-emerald-400">{maxSingleWeight}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="10"
+                      max="35"
+                      step="1"
+                      value={maxSingleWeight}
+                      onChange={(e) => setMaxSingleWeight(parseInt(e.target.value))}
+                      className="w-full h-2 rounded-lg bg-slate-800 accent-emerald-400 cursor-pointer"
+                    />
+                    <p className="text-[10px] text-slate-500">Limits maximum capital permitted in any single company holding.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="font-semibold text-slate-300">Max Sector Exposure Cap</span>
+                      <span className="font-mono font-bold text-teal-400">{maxSectorWeight}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="15"
+                      max="50"
+                      step="1"
+                      value={maxSectorWeight}
+                      onChange={(e) => setMaxSectorWeight(parseInt(e.target.value))}
+                      className="w-full h-2 rounded-lg bg-slate-800 accent-teal-400 cursor-pointer"
+                    />
+                    <p className="text-[10px] text-slate-500">Caps cumulative exposure in any one industrial or economic sector.</p>
+                  </div>
+                </div>
+
+                {/* Loading / Error State */}
+                {loadingRebalance && (
+                  <div className="p-8 rounded-2xl bg-black/40 border border-white/[0.06] flex flex-col items-center justify-center gap-3 text-center">
+                    <RefreshCw size={24} className="animate-spin text-emerald-400" />
+                    <p className="text-xs font-bold text-white">Computing Multi-Objective Quadratic Optimization...</p>
+                    <p className="text-[11px] text-slate-400 max-w-sm">
+                      Evaluating concentration bounds, risk attribution covariance, and generating statutory-compliant order quantities.
+                    </p>
+                  </div>
+                )}
+
+                {rebalanceError && (
+                  <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
+                    <p className="font-bold">Optimization Error</p>
+                    <p>{rebalanceError}</p>
+                  </div>
+                )}
+
+                {/* 3. Rebalance Plan Results */}
+                {rebalancePlan && !loadingRebalance && (
+                  <div className="space-y-6">
+                    {/* Before vs After Delta Metric Cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {/* Health Score */}
+                      <div className="p-4 rounded-2xl bg-black/40 border border-white/[0.06] space-y-2">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Health Score</span>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-lg font-black text-white font-mono">{rebalancePlan.current_health_score}</span>
+                          <span className="text-slate-500 text-xs">➔</span>
+                          <span className="text-lg font-black text-emerald-400 font-mono">{rebalancePlan.projected_health_score}</span>
+                        </div>
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/30 font-mono">
+                          +{rebalancePlan.health_score_delta} pts Improvement
+                        </span>
+                      </div>
+
+                      {/* Risk Category */}
+                      <div className="p-4 rounded-2xl bg-black/40 border border-white/[0.06] space-y-2">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Risk Profile</span>
+                        <div className="flex items-baseline gap-2 text-xs font-black">
+                          <span className="text-slate-300">{rebalancePlan.current_risk_category}</span>
+                          <span className="text-slate-500">➔</span>
+                          <span className="text-indigo-400">{rebalancePlan.projected_risk_category}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 block truncate">
+                          {rebalancePlan.current_risk_category === rebalancePlan.projected_risk_category
+                            ? "Within Safe Tier"
+                            : "Risk Level Shifted"}
+                        </span>
+                      </div>
+
+                      {/* Volatility */}
+                      <div className="p-4 rounded-2xl bg-black/40 border border-white/[0.06] space-y-2">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Ann. Volatility</span>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-sm font-bold text-slate-300 font-mono">{rebalancePlan.current_volatility_pct}%</span>
+                          <span className="text-slate-500 text-xs">➔</span>
+                          <span className="text-sm font-bold text-emerald-400 font-mono">{rebalancePlan.projected_volatility_pct}%</span>
+                        </div>
+                        <span className="text-[10px] text-emerald-400 font-semibold block">
+                          {(rebalancePlan.projected_volatility_pct - rebalancePlan.current_volatility_pct).toFixed(2)}% Δ
+                        </span>
+                      </div>
+
+                      {/* Portfolio Beta */}
+                      <div className="p-4 rounded-2xl bg-black/40 border border-white/[0.06] space-y-2">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Portfolio Beta</span>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-sm font-bold text-slate-300 font-mono">{rebalancePlan.current_beta.toFixed(2)}</span>
+                          <span className="text-slate-500 text-xs">➔</span>
+                          <span className="text-sm font-bold text-teal-400 font-mono">{rebalancePlan.projected_beta.toFixed(2)}</span>
+                        </div>
+                        <span className="text-[10px] text-teal-400 font-semibold block">
+                          {(rebalancePlan.projected_beta - rebalancePlan.current_beta).toFixed(2)} vs Nifty 50
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Capital Liquidity Reallocation Pill */}
+                    <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 flex flex-wrap items-center justify-between gap-4 text-xs">
+                      <div className="flex items-center gap-2">
+                        <Wallet size={16} className="text-indigo-400" />
+                        <span className="font-bold text-white">Rebalancing Capital Flow:</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-6 font-mono">
+                        <div>
+                          <span className="text-slate-400">Capital Freed (Trims): </span>
+                          <strong className="text-rose-400 font-bold">₹{rebalancePlan.capital_freed.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Capital Deployed (Adds): </span>
+                          <strong className="text-emerald-400 font-bold">₹{rebalancePlan.capital_deployed.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Net Cash Impact: </span>
+                          <strong className={`font-bold ${rebalancePlan.net_cash_impact >= 0 ? "text-emerald-400" : "text-amber-400"}`}>
+                            {rebalancePlan.net_cash_impact >= 0 ? "+₹" : "-₹"}{Math.abs(rebalancePlan.net_cash_impact).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Proposed Trades Execution Schedule Table */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
+                          <SlidersHorizontal size={14} className="text-emerald-400" />
+                          Proposed Trades Execution Schedule ({rebalancePlan.trades.length} Actions)
+                        </h4>
+                        <span className="text-[11px] text-slate-400 font-medium">
+                          Click &quot;Execute Order&quot; to open the simulated ledger order ticket
+                        </span>
+                      </div>
+
+                      {rebalancePlan.trades.length === 0 ? (
+                        <div className="p-8 rounded-2xl bg-black/40 border border-white/[0.06] text-center text-xs text-slate-400">
+                          Portfolio is already optimally balanced according to the selected objective constraints!
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-black/40">
+                          <table className="w-full text-left text-xs">
+                            <thead>
+                              <tr className="border-b border-white/[0.08] bg-white/[0.02] text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                                <th className="py-3 px-4">Action</th>
+                                <th className="py-3 px-4">Instrument</th>
+                                <th className="py-3 px-4">Weight Shift</th>
+                                <th className="py-3 px-4">Quantity Δ</th>
+                                <th className="py-3 px-4 text-right">Est. Trade Value</th>
+                                <th className="py-3 px-4">Quantitative Rationale</th>
+                                <th className="py-3 px-4 text-center">Execute</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/[0.06]">
+                              {rebalancePlan.trades.map((t) => {
+                                const isSell = t.action === "SELL";
+                                const isBuy = t.action === "BUY";
+                                return (
+                                  <tr key={t.symbol} className="hover:bg-white/[0.02] transition-colors">
+                                    <td className="py-3.5 px-4">
+                                      <span className={`px-2.5 py-1 rounded-lg font-black text-[10px] tracking-wider border uppercase flex items-center gap-1 w-max ${
+                                        isBuy
+                                          ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                                          : isSell
+                                          ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                                          : "bg-slate-500/15 text-slate-400 border-slate-500/30"
+                                      }`}>
+                                        {isBuy ? <ArrowUpRight size={12} /> : isSell ? <ArrowDownRight size={12} /> : null}
+                                        {t.action}
+                                      </span>
+                                    </td>
+
+                                    <td className="py-3.5 px-4">
+                                      <div className="space-y-0.5">
+                                        <span className="font-bold text-white block">{t.symbol}</span>
+                                        <span className="text-[10px] text-slate-400 block truncate max-w-[140px]">{t.company_name}</span>
+                                      </div>
+                                    </td>
+
+                                    <td className="py-3.5 px-4 font-mono text-xs">
+                                      <span className="text-slate-400">{t.current_weight_pct.toFixed(1)}%</span>
+                                      <span className="text-slate-600 mx-1.5">➔</span>
+                                      <span className="font-bold text-white">{t.target_weight_pct.toFixed(1)}%</span>
+                                    </td>
+
+                                    <td className="py-3.5 px-4 font-mono font-bold">
+                                      <span className={isBuy ? "text-emerald-400" : isSell ? "text-rose-400" : "text-slate-400"}>
+                                        {t.delta_quantity > 0 ? `+${t.delta_quantity}` : `${t.delta_quantity}`} shares
+                                      </span>
+                                    </td>
+
+                                    <td className="py-3.5 px-4 text-right font-mono font-bold text-white">
+                                      ₹{t.estimated_trade_value.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                                    </td>
+
+                                    <td className="py-3.5 px-4 text-[11px] text-slate-300 max-w-xs">
+                                      {t.rationale}
+                                    </td>
+
+                                    <td className="py-3.5 px-4 text-center">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setRebalanceTradeModal({
+                                            isOpen: true,
+                                            trade: t
+                                          });
+                                        }}
+                                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold text-[11px] uppercase tracking-wider transition-all shadow-md shadow-emerald-950/30 flex items-center gap-1 mx-auto"
+                                      >
+                                        <Zap size={12} />
+                                        Execute
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Strategic Commentary */}
+                    <div className="p-4 rounded-2xl bg-indigo-950/20 border border-indigo-500/20 text-xs text-indigo-200 space-y-1.5">
+                      <p className="font-bold text-white flex items-center gap-1.5">
+                        <Sparkles size={14} className="text-indigo-400" />
+                        AI Rebalancing Diagnostic:
+                      </p>
+                      <p className="text-[11px] text-indigo-300 leading-relaxed">
+                        {rebalancePlan.rebalancing_notes}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Row 6: Interactive "What-If" Portfolio Risk Simulator Sandbox */}
               <div className="p-6 rounded-3xl cyber-card cyber-card-iris backdrop-blur-2xl space-y-6 relative overflow-hidden">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
@@ -1093,6 +1510,27 @@ export default function IntelligencePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Rebalance Trade Execution Modal */}
+      {rebalanceTradeModal.isOpen && rebalanceTradeModal.trade && (
+        <OrderExecutionModal
+          isOpen={rebalanceTradeModal.isOpen}
+          onClose={() => setRebalanceTradeModal({ isOpen: false })}
+          onOrderSettled={() => {
+            setRebalanceTradeModal({ isOpen: false });
+            toast.success("Order Settled", `Ledger updated for ${rebalanceTradeModal.trade?.symbol}. Recalculating portfolio health...`);
+            loadIntelligence(selectedPortfolioId);
+            handleGenerateRebalancePlan();
+          }}
+          defaultPortfolioId={selectedPortfolioId}
+          defaultSymbol={rebalanceTradeModal.trade.symbol}
+          defaultCompanyName={rebalanceTradeModal.trade.company_name}
+          defaultSector={rebalanceTradeModal.trade.sector}
+          defaultPrice={rebalanceTradeModal.trade.estimated_price}
+          defaultSide={rebalanceTradeModal.trade.action === "SELL" ? "SELL" : "BUY"}
+          defaultQuantity={Math.max(1, Math.round(Math.abs(rebalanceTradeModal.trade.delta_quantity)))}
+        />
       )}
     </div>
   );

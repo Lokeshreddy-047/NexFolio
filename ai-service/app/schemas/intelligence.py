@@ -130,3 +130,46 @@ class WhatIfSimulationResponse(BaseModel):
     metrics_comparison: Dict[str, SimulationMetricDelta]
     top_driver_shifts: List[HumanReadableDriver] = []
     simulation_notes: str
+
+
+class RebalanceTradeItem(BaseModel):
+    action: str  # "BUY" | "SELL" | "HOLD"
+    symbol: str
+    company_name: str
+    sector: str
+    current_quantity: float
+    target_quantity: float
+    delta_quantity: float
+    estimated_price: float
+    estimated_trade_value: float
+    current_weight_pct: float
+    target_weight_pct: float
+    rationale: str
+
+
+class RebalancePlanRequest(BaseModel):
+    objective: str = "MAXIMIZE_HEALTH"  # "MAXIMIZE_HEALTH" | "LOW_RISK" | "SECTOR_BALANCED" | "TAX_AWARE"
+    max_single_weight_pct: Optional[float] = 18.0
+    max_sector_weight_pct: Optional[float] = 30.0
+
+
+class RebalancePlanResponse(BaseModel):
+    portfolio_id: str
+    portfolio_name: str
+    objective: str
+    current_health_score: int
+    projected_health_score: int
+    health_score_delta: int
+    current_risk_category: str
+    projected_risk_category: str
+    current_volatility_pct: float
+    projected_volatility_pct: float
+    current_beta: float
+    projected_beta: float
+    total_portfolio_value: float
+    capital_freed: float
+    capital_deployed: float
+    net_cash_impact: float
+    trades: List[RebalanceTradeItem] = []
+    rebalancing_notes: str
+

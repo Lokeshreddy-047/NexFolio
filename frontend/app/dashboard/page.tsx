@@ -22,7 +22,8 @@ import { DataPedigreeBadge } from "@/components/data-badge";
 import { useMarketFeed } from "@/lib/useMarketFeed";
 import {
   MotionContainer,
-  MotionCard
+  MotionCard,
+  AnimatedCounter
 } from "@/components/ui/motion";
 import {
   getPortfolios,
@@ -334,8 +335,8 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="flex flex-wrap items-baseline gap-4">
-                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300">
-                      {formatINR(pulse?.total_value || 0)}
+                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300 flex items-center">
+                      <AnimatedCounter value={pulse?.total_value || 0} prefix="₹" decimals={2} />
                     </h1>
 
                     {/* Day P&L Badge */}
@@ -365,19 +366,21 @@ export default function DashboardPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-black/50 p-4 rounded-2xl border border-white/[0.08] backdrop-blur-xl">
                     <div className="px-3">
                       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Invested Capital</div>
-                      <div className="text-base font-black text-slate-200 mt-1 font-mono">{formatINR(pulse?.invested_capital || 0)}</div>
+                      <div className="text-base font-black text-slate-200 mt-1 font-mono">
+                        <AnimatedCounter value={pulse?.invested_capital || 0} prefix="₹" decimals={2} />
+                      </div>
                     </div>
                     <div className="px-3 border-l border-white/[0.08]">
                       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Overall ROI</div>
-                      <div className={`text-base font-black mt-1 font-mono ${(pulse?.total_pnl || 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                      <div className={`text-base font-black mt-1 font-mono flex items-center ${(pulse?.total_roi_pct || 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                         {(pulse?.total_roi_pct || 0) >= 0 ? "+" : ""}
-                        {pulse?.total_roi_pct?.toFixed(2)}%
+                        <AnimatedCounter value={pulse?.total_roi_pct || 0} suffix="%" decimals={2} />
                       </div>
                     </div>
                     <div className="px-3 border-l border-white/[0.08] col-span-2 sm:col-span-1">
                       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total P&L</div>
                       <div className={`text-base font-black mt-1 font-mono ${(pulse?.total_pnl || 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                        {formatINR(pulse?.total_pnl || 0)}
+                        <AnimatedCounter value={pulse?.total_pnl || 0} prefix="₹" decimals={2} />
                       </div>
                     </div>
                   </div>
@@ -738,7 +741,7 @@ export default function DashboardPage() {
 
                 <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-black/40 border border-white/[0.06] mb-3">
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-400 via-teal-500 to-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-emerald-500/30">
-                    {health?.health_score || 0}
+                    <AnimatedCounter value={health?.health_score || 0} decimals={0} />
                   </div>
                   <div>
                     <div className="text-xs font-bold text-slate-100">Health Score</div>

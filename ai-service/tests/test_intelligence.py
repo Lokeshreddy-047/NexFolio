@@ -357,3 +357,58 @@ async def test_intelligence_cache_invalidation_on_composition_change(mock_db):
         # Value must reflect the updated quantity (30 shares instead of 10)
         assert val2 > val1
 
+
+@pytest.mark.asyncio
+async def test_portfolio_rebalance_plan_endpoint(mock_db):
+    """
+    Verifies the multi-objective AI rebalance-plan API calculates proposed trades and projected metrics.
+    """
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        port_res = await client.post(
+            "/api/v1/portfolios",
+            json={"name": "Rebalance Target Portfolio", "currency": "INR"},
+            headers={"Authorization": f"Bearer {USER_A_TOKEN}"}
+        )
+        port_id = port_res.json()["id"]
+
+        # Add an overweight holding (RELIANCE) and a small holding (INFY)
+        await client.post(
+            "/api/v1/transactions",
+            json={
+                "portfolio_id": port_id,
+                "symbol": "RELIANCE",
+                "transaction_type": "BUY",
+                "quantity": 100,
+                "price": 2500.0,
+                "asset_type": "Equity"
+            },
+            headers={"Authorization": f"Bearer {USER_A_TOKEN}"}
+        )
+        await client.post(
+            "/api/v1/transactions",
+            json={
+                "portfolio_id": port_id,
+                "symbol": "INFY",
+                "transaction_type": "BUY",
+                "quantity": 5,
+                "price": 1500.0,
+                "asset_type": "Equity"
+            },
+            headers={"Authorization": f"Bearer {USER_A_TOKEN}"}
+        )
+
+        rebal_res = await client.post(
+            f"/api/v1/portfolios/{port_id}/rebalance-plan",
+            json={"objective": "MAXIMIZE_HEALTH", "max_single_weight_pct": 18.0},
+            headers={"Authorization": f"Bearer {USER_A_TOKEN}"}
+        )
+        assert rebal_res.status_code == 200
+        data = rebal_res.json()
+        assert data["portfolio_id"] == port_id
+        assert data["objective"] == "MAXIMIZE_HEALTH"
+        assert "trades" in data
+        assert len(data["trades"]) > 0
+        assert data["projected_health_score"] >= data["current_health_score"]
+
+

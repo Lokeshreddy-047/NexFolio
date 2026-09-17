@@ -18,11 +18,16 @@ def get_database():
         return _database
 
     try:
-        _client = AsyncIOMotorClient(
-            MONGODB_URI,
-            tlsCAFile=certifi.where(),
-            serverSelectionTimeoutMS=5000,
+        is_tls = (
+            "mongodb+srv://" in MONGODB_URI
+            or "tls=true" in MONGODB_URI.lower()
+            or "ssl=true" in MONGODB_URI.lower()
         )
+        kwargs = {"serverSelectionTimeoutMS": 5000}
+        if is_tls:
+            kwargs["tlsCAFile"] = certifi.where()
+
+        _client = AsyncIOMotorClient(MONGODB_URI, **kwargs)
         _database = _client[DATABASE_NAME]
     except Exception as exc:
         print(f"[MongoDB] Client initialization warning: {exc}")

@@ -390,10 +390,449 @@ html.light tbody tr:hover {
   background: rgba(148, 163, 184, 0.45);
 }
 
-/* 10. Print optimizations */
-@media print {
-  body {
-    background-color: #ffffff !important;
-    color: #000000 !important;
+/* Screen vs Print Utility Classes */
+.print-only {
+  display: none !important;
+}
+
+@media screen {
+  .print-only {
+    display: none !important;
   }
 }
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 12mm 14mm 12mm;
+  }
+
+  /* Universal multi-page block document flow */
+  html,
+  body {
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    font-size: 9.5pt !important;
+    line-height: 1.35 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  }
+
+  /* Reset all flex/grid parent containers to block flow for multi-page pagination */
+  #__next,
+  body > div,
+  body > div > div,
+  .flex,
+  .min-h-screen,
+  main {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    float: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Strip all transforms and animations that break browser print pagination */
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Elements to hide unconditionally in print */
+  .no-print,
+  .print-hidden,
+  .print\:hidden,
+  aside,
+  header,
+  nav,
+  button,
+  input,
+  select,
+  [role="dialog"],
+  .fixed,
+  .sticky,
+  [data-headlessui-state] {
+    display: none !important;
+  }
+
+  /* Elements to show only in print */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Table structure formatting for multi-page printing */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    margin: 10px 0 !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  /* Containers holding tables should break cleanly across pages without clipping */
+  .rounded-3xl:has(table),
+  .rounded-2xl:has(table),
+  div:has(table),
+  .overflow-x-auto,
+  .overflow-y-auto {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Standalone cards, metrics, and summaries avoid breaking awkwardly across pages */
+  .break-inside-avoid,
+  .rounded-3xl:not(:has(table)),
+  .rounded-2xl:not(:has(table)) {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    -webkit-column-break-inside: avoid !important;
+  }
+
+  /* =========================================================================
+     1. LIGHT THEME PRINT STYLES (Clean Executive Paper / Dark Contrast Inks)
+     ========================================================================= */
+  html.light,
+  html.light body,
+  html[data-theme="light"],
+  html[data-theme="light"] body {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  html.light #__next,
+  html.light main,
+  html[data-theme="light"] #__next,
+  html[data-theme="light"] main {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  html.light .cyber-card,
+  html.light [class*="bg-slate-900"],
+  html.light [class*="bg-slate-950"],
+  html.light [class*="bg-black/"],
+  html.light [class*="bg-slate-800"],
+  html[data-theme="light"] .cyber-card,
+  html[data-theme="light"] [class*="bg-slate-900"],
+  html[data-theme="light"] [class*="bg-slate-950"],
+  html[data-theme="light"] [class*="bg-black/"],
+  html[data-theme="light"] [class*="bg-slate-800"] {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    margin-bottom: 12px !important;
+  }
+
+  html.light th,
+  html[data-theme="light"] th {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+    border-bottom: 2px solid #94a3b8 !important;
+    border-top: 1px solid #cbd5e1 !important;
+    font-weight: 700 !important;
+    font-size: 7.5pt !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    padding: 7px 9px !important;
+  }
+
+  html.light td,
+  html[data-theme="light"] td {
+    border-bottom: 1px solid #e2e8f0 !important;
+    color: #1e293b !important;
+    font-size: 8.5pt !important;
+    padding: 6px 9px !important;
+  }
+
+  html.light tbody tr:nth-child(even),
+  html[data-theme="light"] tbody tr:nth-child(even) {
+    background-color: #f8fafc !important;
+  }
+
+  html.light h1, html.light h2, html.light h3, html.light h4, html.light h5, html.light h6,
+  html.light strong, html.light b, html.light .font-bold, html.light .font-black,
+  html[data-theme="light"] h1, html[data-theme="light"] h2, html[data-theme="light"] h3,
+  html[data-theme="light"] strong, html[data-theme="light"] b {
+    color: #0f172a !important;
+  }
+
+  html.light p, html.light span, html.light div, html.light label,
+  html[data-theme="light"] p, html[data-theme="light"] span, html[data-theme="light"] div {
+    color: #334155;
+  }
+
+  html.light .text-emerald-400, html.light .text-emerald-300, html.light .text-emerald-500,
+  html[data-theme="light"] .text-emerald-400 {
+    color: #047857 !important;
+  }
+  html.light .text-rose-400, html.light .text-rose-300, html.light .text-rose-500,
+  html[data-theme="light"] .text-rose-400 {
+    color: #be123c !important;
+  }
+  html.light .text-indigo-400, html.light .text-indigo-300,
+  html[data-theme="light"] .text-indigo-400 {
+    color: #4338ca !important;
+  }
+  html.light .text-teal-400, html.light .text-teal-300,
+  html[data-theme="light"] .text-teal-400 {
+    color: #0f766e !important;
+  }
+  html.light .text-cyan-400, html.light .text-cyan-300,
+  html[data-theme="light"] .text-cyan-400 {
+    color: #0369a1 !important;
+  }
+  html.light .text-amber-400, html.light .text-amber-300,
+  html[data-theme="light"] .text-amber-400 {
+    color: #b45309 !important;
+  }
+
+  html.light .bg-emerald-500\/10, html.light .bg-emerald-500\/15, html.light .bg-emerald-500\/20,
+  html[data-theme="light"] .bg-emerald-500\/10 {
+    background-color: #ecfdf5 !important;
+    border: 1px solid #a7f3d0 !important;
+  }
+  html.light .bg-rose-500\/10, html.light .bg-rose-500\/15, html.light .bg-rose-500\/20,
+  html[data-theme="light"] .bg-rose-500\/10 {
+    background-color: #fff1f2 !important;
+    border: 1px solid #fecdd3 !important;
+  }
+  html.light .bg-indigo-500\/10, html.light .bg-indigo-500\/15, html.light .bg-indigo-500\/20,
+  html[data-theme="light"] .bg-indigo-500\/10 {
+    background-color: #eef2ff !important;
+    border: 1px solid #c7d2fe !important;
+  }
+  html.light .bg-teal-500\/10, html.light .bg-teal-500\/20,
+  html[data-theme="light"] .bg-teal-500\/10 {
+    background-color: #f0fdfa !important;
+    border: 1px solid #99f6e4 !important;
+  }
+
+  /* =========================================================================
+     2. DARK THEME PRINT STYLES (Institutional Obsidian / Vibrant Neon Inks)
+     ========================================================================= */
+  html.dark,
+  html.dark body,
+  html[data-theme="dark"],
+  html[data-theme="dark"] body,
+  html:not(.light),
+  html:not(.light) body {
+    background-color: #030712 !important;
+    background: #030712 !important;
+    color: #f8fafc !important;
+  }
+
+  html.dark #__next,
+  html.dark main,
+  html[data-theme="dark"] #__next,
+  html[data-theme="dark"] main,
+  html:not(.light) #__next,
+  html:not(.light) main {
+    background: #030712 !important;
+    color: #f8fafc !important;
+  }
+
+  html.dark .cyber-card,
+  html.dark [class*="bg-slate-900"],
+  html.dark [class*="bg-slate-950"],
+  html.dark [class*="bg-black/"],
+  html.dark [class*="bg-slate-800"],
+  html[data-theme="dark"] .cyber-card,
+  html[data-theme="dark"] [class*="bg-slate-900"],
+  html[data-theme="dark"] [class*="bg-slate-950"],
+  html[data-theme="dark"] [class*="bg-black/"],
+  html[data-theme="dark"] [class*="bg-slate-800"],
+  html:not(.light) .cyber-card,
+  html:not(.light) [class*="bg-slate-900"],
+  html:not(.light) [class*="bg-slate-950"],
+  html:not(.light) [class*="bg-black/"],
+  html:not(.light) [class*="bg-slate-800"] {
+    background-color: #0b1120 !important;
+    background: #0b1120 !important;
+    color: #f8fafc !important;
+    border: 1px solid #1e293b !important;
+    border-radius: 8px !important;
+    margin-bottom: 12px !important;
+  }
+
+  html.dark th,
+  html[data-theme="dark"] th,
+  html:not(.light) th {
+    background-color: #162032 !important;
+    color: #38bdf8 !important;
+    border-bottom: 2px solid #334155 !important;
+    border-top: 1px solid #1e293b !important;
+    font-weight: 700 !important;
+    font-size: 7.5pt !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    padding: 7px 9px !important;
+  }
+
+  html.dark td,
+  html[data-theme="dark"] td,
+  html:not(.light) td {
+    border-bottom: 1px solid #1e293b !important;
+    color: #e2e8f0 !important;
+    font-size: 8.5pt !important;
+    padding: 6px 9px !important;
+  }
+
+  html.dark tbody tr:nth-child(even),
+  html[data-theme="dark"] tbody tr:nth-child(even),
+  html:not(.light) tbody tr:nth-child(even) {
+    background-color: #0d1527 !important;
+  }
+
+  html.dark h1, html.dark h2, html.dark h3, html.dark h4, html.dark h5, html.dark h6,
+  html.dark strong, html.dark b, html.dark .font-bold, html.dark .font-black,
+  html[data-theme="dark"] h1, html[data-theme="dark"] h2, html[data-theme="dark"] h3,
+  html[data-theme="dark"] strong, html[data-theme="dark"] b,
+  html:not(.light) h1, html:not(.light) h2, html:not(.light) h3, html:not(.light) h4, html:not(.light) h5, html:not(.light) h6,
+  html:not(.light) strong, html:not(.light) b, html:not(.light) .font-bold, html:not(.light) .font-black {
+    color: #ffffff !important;
+  }
+
+  html.dark p, html.dark span, html.dark div, html.dark label,
+  html[data-theme="dark"] p, html[data-theme="dark"] span, html[data-theme="dark"] div,
+  html:not(.light) p, html:not(.light) span, html:not(.light) div, html:not(.light) label {
+    color: #cbd5e1;
+  }
+
+  html.dark .text-emerald-400, html.dark .text-emerald-300, html.dark .text-emerald-500,
+  html[data-theme="dark"] .text-emerald-400,
+  html:not(.light) .text-emerald-400, html:not(.light) .text-emerald-300 {
+    color: #34d399 !important;
+  }
+  html.dark .text-rose-400, html.dark .text-rose-300, html.dark .text-rose-500,
+  html[data-theme="dark"] .text-rose-400,
+  html:not(.light) .text-rose-400, html:not(.light) .text-rose-300 {
+    color: #fb7185 !important;
+  }
+  html.dark .text-indigo-400, html.dark .text-indigo-300,
+  html[data-theme="dark"] .text-indigo-400,
+  html:not(.light) .text-indigo-400, html:not(.light) .text-indigo-300 {
+    color: #818cf8 !important;
+  }
+  html.dark .text-teal-400, html.dark .text-teal-300,
+  html[data-theme="dark"] .text-teal-400,
+  html:not(.light) .text-teal-400, html:not(.light) .text-teal-300 {
+    color: #2dd4bf !important;
+  }
+  html.dark .text-cyan-400, html.dark .text-cyan-300,
+  html[data-theme="dark"] .text-cyan-400,
+  html:not(.light) .text-cyan-400, html:not(.light) .text-cyan-300 {
+    color: #38bdf8 !important;
+  }
+  html.dark .text-amber-400, html.dark .text-amber-300,
+  html[data-theme="dark"] .text-amber-400,
+  html:not(.light) .text-amber-400, html:not(.light) .text-amber-300 {
+    color: #fbbf24 !important;
+  }
+
+  html.dark .bg-emerald-500\/10, html.dark .bg-emerald-500\/15, html.dark .bg-emerald-500\/20,
+  html[data-theme="dark"] .bg-emerald-500\/10,
+  html:not(.light) .bg-emerald-500\/10, html:not(.light) .bg-emerald-500\/20 {
+    background-color: rgba(6, 78, 59, 0.45) !important;
+    border: 1px solid #065f46 !important;
+  }
+  html.dark .bg-rose-500\/10, html.dark .bg-rose-500\/15, html.dark .bg-rose-500\/20,
+  html[data-theme="dark"] .bg-rose-500\/10,
+  html:not(.light) .bg-rose-500\/10, html:not(.light) .bg-rose-500\/20 {
+    background-color: rgba(136, 19, 55, 0.45) !important;
+    border: 1px solid #9f1239 !important;
+  }
+  html.dark .bg-indigo-500\/10, html.dark .bg-indigo-500\/15, html.dark .bg-indigo-500\/20,
+  html[data-theme="dark"] .bg-indigo-500\/10,
+  html:not(.light) .bg-indigo-500\/10, html:not(.light) .bg-indigo-500\/20 {
+    background-color: rgba(49, 46, 129, 0.45) !important;
+    border: 1px solid #3730a3 !important;
+  }
+  html.dark .bg-teal-500\/10, html.dark .bg-teal-500\/20,
+  html[data-theme="dark"] .bg-teal-500\/10,
+  html:not(.light) .bg-teal-500\/10, html:not(.light) .bg-teal-500\/20 {
+    background-color: rgba(19, 78, 74, 0.45) !important;
+    border: 1px solid #115e59 !important;
+  }
+
+  /* Letterhead & Footer Dark Overrides */
+  html.dark .print-only,
+  html[data-theme="dark"] .print-only,
+  html:not(.light) .print-only {
+    color: #f8fafc !important;
+  }
+  html.dark .print-only .border-b-2,
+  html[data-theme="dark"] .print-only .border-b-2,
+  html:not(.light) .print-only .border-b-2 {
+    border-bottom-color: #334155 !important;
+  }
+  html.dark .print-only .bg-slate-100,
+  html[data-theme="dark"] .print-only .bg-slate-100,
+  html:not(.light) .print-only .bg-slate-100 {
+    background-color: #0f172a !important;
+    border-color: #1e293b !important;
+    color: #e2e8f0 !important;
+  }
+  html.dark .print-only .text-slate-950,
+  html[data-theme="dark"] .print-only .text-slate-950,
+  html:not(.light) .print-only .text-slate-950 {
+    color: #ffffff !important;
+  }
+  html.dark .print-only .text-slate-600,
+  html.dark .print-only .text-slate-700,
+  html[data-theme="dark"] .print-only .text-slate-600,
+  html:not(.light) .print-only .text-slate-600,
+  html:not(.light) .print-only .text-slate-700 {
+    color: #94a3b8 !important;
+  }
+  html.dark .print-only.border-t-2,
+  html[data-theme="dark"] .print-only.border-t-2,
+  html:not(.light) .print-only.border-t-2 {
+    border-top-color: #334155 !important;
+    color: #94a3b8 !important;
+  }
+  html.dark .print-only .border-slate-200,
+  html[data-theme="dark"] .print-only .border-slate-200,
+  html:not(.light) .print-only .border-slate-200 {
+    border-color: #1e293b !important;
+    color: #64748b !important;
+  }
+}
+
+

@@ -5,13 +5,16 @@ from app.dependencies.auth import get_current_user
 from app.schemas.intelligence import (
     PortfolioIntelligenceResponse,
     WhatIfSimulationRequest,
-    WhatIfSimulationResponse
+    WhatIfSimulationResponse,
+    RebalancePlanRequest,
+    RebalancePlanResponse
 )
 from app.repositories.portfolio_repository import get_portfolio_by_id_and_user
 from app.repositories.holding_repository import get_holdings_by_portfolio
 from app.services.intelligence_service import (
     generate_portfolio_intelligence,
-    simulate_what_if_risk
+    simulate_what_if_risk,
+    compute_portfolio_rebalance_plan
 )
 
 router = APIRouter(prefix="/portfolios", tags=["Portfolio Intelligence"])
@@ -66,3 +69,33 @@ async def simulate_portfolio_rebalancing_risk(
         raw_holdings=raw_holdings,
         request=payload
     )
+
+
+@router.post("/{portfolio_id}/rebalance-plan", response_model=RebalancePlanResponse)
+async def get_portfolio_rebalancing_plan(
+    portfolio_id: str,
+    payload: RebalancePlanRequest = RebalancePlanRequest(),
+    current_user: UserPrincipal = Depends(get_current_user)
+):
+    """
+    Computes an AI-driven, multi-objective portfolio rebalancing plan with itemized
+    proposed trades, projected health scorecard improvements, and risk mitigation deltas.
+    """
+    portfolio_doc = await get_portfolio_by_id_and_user(portfolio_id=portfolio_id, user_id=current_user.uid)
+    if not portfolio_doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Portfolio not found or access denied."
+        )
+
+    raw_holdings = await get_holdings_by_portfolio(portfolio_id=portfolio_id, user_id=current_user.uid)
+
+    return await compute_portfolio_rebalance_plan(
+        user_id=current_user.uid,
+        portfolio_doc=portfolio_doc,
+        raw_holdings=raw_holdings,
+        objective=payload.objective,
+        max_single_weight_pct=payload.max_single_weight_pct or 18.0,
+        max_sector_weight_pct=payload.max_sector_weight_pct or 30.0
+    )
+

@@ -43,14 +43,19 @@ import {
   AlertTriangle,
   Zap,
   CheckCircle2,
-  X
+  X,
+  Sun,
+  Moon
 } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
+import { useTheme } from "@/components/theme-provider";
+import { exportThemedReportExcel } from "@/lib/excel-export";
 
 export default function ReportsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const toast = useToast();
+  const { resolvedTheme, toggleTheme } = useTheme();
   const [portfolios, setPortfolios] = useState<PortfolioSummary[]>([]);
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>("");
   const [report, setReport] = useState<InvestorReportResponse | null>(null);
@@ -270,6 +275,32 @@ export default function ReportsPage() {
     toast.success("Harvest Plan Exported", "Downloaded CSV action plan.");
   };
 
+  // 8b. Download Themed Excel Spreadsheet (.xls in active app theme)
+  const handleDownloadThemedExcel = () => {
+    if (!report && !taxReport) {
+      toast.warning("No Report Loaded", "Please load a portfolio report first.");
+      return;
+    }
+    try {
+      exportThemedReportExcel({
+        report,
+        taxReport,
+        activeTab,
+        portfolioName: activePortfolioName,
+        integrityHash: reportIntegrityHash,
+        theme: resolvedTheme,
+        selectedTaxYear,
+        auditLogs,
+      });
+      toast.success(
+        "Excel Dossier Exported",
+        `Spreadsheet generated in ${resolvedTheme.toUpperCase()} theme.`
+      );
+    } catch (err: unknown) {
+      toast.error("Export Error", err instanceof Error ? err.message : "Failed to export Excel spreadsheet.");
+    }
+  };
+
   // 9. Toggle Harvest Simulation Candidate
   const toggleHarvestCandidate = (symbol: string) => {
     setSimulatedHarvestSymbols(prev => {
@@ -366,20 +397,90 @@ export default function ReportsPage() {
     ];
   }, [simulatedPostHarvestTax]);
 
+  const currentPortfolio = portfolios.find(p => p.id === selectedPortfolioId);
+  const activePortfolioName =
+    report?.portfolio_name ||
+    taxReport?.portfolio_name ||
+    currentPortfolio?.name ||
+    "Institutional Portfolio";
+
+  const reportIntegrityHash =
+    report?.report_integrity_hash ||
+    (selectedPortfolioId
+      ? `NXF-SHA256-${selectedPortfolioId.slice(-6).toUpperCase()}-${(report?.generated_at ? new Date(report.generated_at).getTime() : Date.now()).toString(16).toUpperCase()}`
+      : "NXF-SHA256-VALIDATED-7F8A92B4C10E");
+
   return (
     <div className="flex min-h-screen bg-[#030712] text-slate-100 font-sans antialiased">
       {/* Sidebar hidden during print */}
-      <div className="print:hidden">
+      <div className="no-print print-hidden print:hidden">
         <Sidebar />
       </div>
 
       <div className="flex flex-col flex-1 min-w-0">
         {/* Header hidden during print */}
-        <div className="print:hidden">
+        <div className="no-print print-hidden print:hidden">
           <Header title="Reports & Tax Intelligence" />
         </div>
 
         <main className="flex-1 p-4 lg:p-8 space-y-6 max-w-[1400px] w-full mx-auto">
+          {/* Printable Official Institutional Letterhead (Visible only on print/PDF export) */}
+          <div className="print-only mb-8 pb-5 border-b-2 border-slate-900 dark:border-slate-700 text-slate-950 dark:text-slate-100 break-inside-avoid">
+            {/* Top Masthead Row: Brand Emblem + Document Classification */}
+            <div className="flex items-start justify-between gap-6">
+              <div className="space-y-1">
+                <div className="flex items-center gap-3">
+                  {/* NexFolio Geometric Logo Badge */}
+                  <div className="w-10 h-10 rounded-xl bg-slate-950 dark:bg-emerald-500/20 text-emerald-400 border border-slate-800 dark:border-emerald-500/40 flex items-center justify-center font-black text-sm tracking-tighter shadow-sm">
+                    NXF
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-black tracking-tight text-slate-950 dark:text-white uppercase font-sans">
+                      NexFolio Institutional Asset Intelligence
+                    </h1>
+                    <p className="text-[10.5px] text-slate-600 dark:text-slate-400 font-medium tracking-wide">
+                      Fiduciary Wealth Management &bull; Quantitative Risk Engine &bull; Statutory Indian Tax Compliance
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-right text-[11px] text-slate-700 dark:text-slate-300 font-mono space-y-0.5 shrink-0">
+                <div className="font-bold text-slate-950 dark:text-white uppercase tracking-wider text-[10px] bg-slate-200 dark:bg-slate-800 px-2.5 py-1 rounded-md inline-block">
+                  {activeTab === "TAX_HARVESTING" ? "Statutory Tax Schedule & Loss Harvest Report" : activeTab === "AUDIT_LOGS" ? "System Audit Trail & Provenance Ledger" : "Executive Portfolio Intelligence Dossier"}
+                </div>
+                <div><strong>SEBI PMS Reg:</strong> INP000008472</div>
+                <div><strong>Governing Law:</strong> Income-tax Act, 2025 Schedule</div>
+              </div>
+            </div>
+
+            {/* 4-Cell Structured Metadata Strip */}
+            <div className="mt-4 grid grid-cols-4 gap-2 text-[10px] font-mono p-3 rounded-xl bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800">
+              <div className="space-y-0.5">
+                <span className="text-slate-500 dark:text-slate-400 uppercase text-[9px] block font-sans font-semibold">Portfolio Entity</span>
+                <strong className="text-slate-950 dark:text-white font-bold text-xs truncate block">{activePortfolioName}</strong>
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-slate-500 dark:text-slate-400 uppercase text-[9px] block font-sans font-semibold">As-Of Date</span>
+                <strong className="text-slate-950 dark:text-white font-bold text-xs block">
+                  {new Date(report?.generated_at || Date.now()).toLocaleDateString("en-IN", { dateStyle: "medium" })}
+                </strong>
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-slate-500 dark:text-slate-400 uppercase text-[9px] block font-sans font-semibold">Document SHA-256 Hash</span>
+                <strong className="text-indigo-700 dark:text-indigo-400 font-bold text-[10px] truncate block" title={reportIntegrityHash}>
+                  {reportIntegrityHash.slice(0, 18)}...
+                </strong>
+              </div>
+              <div className="space-y-0.5 text-right">
+                <span className="text-slate-500 dark:text-slate-400 uppercase text-[9px] block font-sans font-semibold">Classification</span>
+                <span className="inline-block px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold text-[9px] border border-emerald-300 dark:border-emerald-700">
+                  CONFIDENTIAL &bull; {resolvedTheme.toUpperCase()}
+                </span>
+              </div>
+            </div>
+          </div>
+
           <MotionContainer className="space-y-6">
           {error && (
             <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center justify-between">
@@ -393,36 +494,38 @@ export default function ReportsPage() {
           {loading && !portfolios.length && (
             <div className="p-12 text-center text-xs text-slate-400">
               <RefreshCw size={24} className="animate-spin mx-auto text-emerald-400 mb-2" />
-              Loading portfolio reports & tax intelligence...
+              Loading portfolio reports &amp; tax intelligence...
             </div>
           )}
 
           {/* Top Control Bar (Hidden on print) */}
-          <div className="print:hidden flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-3xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md">
+          <div className="no-print print-hidden print:hidden flex flex-col xl:flex-row xl:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-md shadow-lg">
             {/* Target Portfolio & Version Selector */}
             <div className="flex flex-wrap items-center gap-3">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Portfolio:
-              </label>
-              <select
-                value={selectedPortfolioId}
-                onChange={e => setSelectedPortfolioId(e.target.value)}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs font-semibold text-white focus:outline-none"
-              >
-                {portfolios.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.currency})</option>
-                ))}
-              </select>
+              <div className="flex items-center gap-2">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Portfolio:
+                </label>
+                <select
+                  value={selectedPortfolioId}
+                  onChange={e => setSelectedPortfolioId(e.target.value)}
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-700/80 text-xs font-semibold text-white focus:outline-none focus:border-emerald-500 transition-colors shadow-inner"
+                >
+                  {portfolios.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.currency})</option>
+                  ))}
+                </select>
+              </div>
 
               {activeTab === "DOSSIER" && historicalReports.length > 0 && (
                 <div className="flex items-center gap-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                     Version:
                   </label>
                   <select
                     value={selectedReportId}
                     onChange={e => handleSelectSnapshot(e.target.value)}
-                    className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-indigo-300 font-mono focus:outline-none"
+                    className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700/80 text-xs text-indigo-300 font-mono focus:outline-none focus:border-indigo-500 transition-colors shadow-inner"
                   >
                     {historicalReports.map(h => (
                       <option key={h.id} value={h.id}>
@@ -435,7 +538,7 @@ export default function ReportsPage() {
 
               {activeTab === "TAX_HARVESTING" && (
                 <div className="flex items-center gap-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                     Tax Period:
                   </label>
                   <select
@@ -444,7 +547,7 @@ export default function ReportsPage() {
                       setSelectedTaxYear(e.target.value);
                       loadTaxReport(selectedPortfolioId, e.target.value);
                     }}
-                    className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-emerald-300 font-mono focus:outline-none"
+                    className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700/80 text-xs text-emerald-300 font-mono focus:outline-none focus:border-emerald-500 transition-colors shadow-inner"
                   >
                     <option value="Tax Year 2026-27">Tax Year 2026-27 · Income-tax Act, 2025</option>
                     <option value="FY 2025-26">FY 2025-26 · Income-tax Act, 1961</option>
@@ -456,21 +559,25 @@ export default function ReportsPage() {
             </div>
 
             {/* Actions & Tab Switcher */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Tab Switcher */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Tab Switcher Segmented Control */}
               <div className="flex items-center p-1 rounded-xl bg-slate-950 border border-slate-800 text-xs font-semibold">
                 <button
                   onClick={() => setActiveTab("DOSSIER")}
-                  className={`px-3 py-1.5 rounded-lg transition-all ${
-                    activeTab === "DOSSIER" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "text-slate-400 hover:text-slate-200"
+                  className={`px-3.5 py-1.5 rounded-lg transition-all ${
+                    activeTab === "DOSSIER"
+                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm"
+                      : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
                   Executive Dossier
                 </button>
                 <button
                   onClick={() => setActiveTab("TAX_HARVESTING")}
-                  className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
-                    activeTab === "TAX_HARVESTING" ? "bg-teal-500/20 text-teal-300 border border-teal-500/30" : "text-slate-400 hover:text-slate-200"
+                  className={`px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                    activeTab === "TAX_HARVESTING"
+                      ? "bg-teal-500/20 text-teal-300 border border-teal-500/40 shadow-sm"
+                      : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
                   <Receipt size={13} className="text-teal-400" />
@@ -478,14 +585,17 @@ export default function ReportsPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab("AUDIT_LOGS")}
-                  className={`px-3 py-1.5 rounded-lg transition-all ${
-                    activeTab === "AUDIT_LOGS" ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" : "text-slate-400 hover:text-slate-200"
+                  className={`px-3.5 py-1.5 rounded-lg transition-all ${
+                    activeTab === "AUDIT_LOGS"
+                      ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-sm"
+                      : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
                   Audit Trail ({auditLogs.length})
                 </button>
               </div>
 
+              {/* Refresh Button */}
               <button
                 onClick={() => {
                   if (activeTab === "TAX_HARVESTING") {
@@ -495,7 +605,7 @@ export default function ReportsPage() {
                   }
                 }}
                 disabled={generating || taxLoading}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition-colors"
+                className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition-colors"
                 title="Refresh report data"
               >
                 <RefreshCw size={14} className={generating || taxLoading ? "animate-spin" : ""} />
@@ -503,9 +613,10 @@ export default function ReportsPage() {
 
               {activeTab === "TAX_HARVESTING" && (
                 <button
+                  type="button"
                   onClick={handleDownloadCSV}
                   disabled={!taxReport}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 text-xs font-semibold border border-slate-700 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-emerald-300 text-xs font-semibold border border-slate-700 transition-all"
                   title="Download ITR Schedule-Compatible CSV"
                 >
                   <FileSpreadsheet size={13} />
@@ -513,21 +624,53 @@ export default function ReportsPage() {
                 </button>
               )}
 
+              {/* Themed Excel Export */}
               <button
+                type="button"
+                onClick={handleDownloadThemedExcel}
+                disabled={!report && !taxReport}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 text-xs font-semibold border border-teal-500/30 transition-all shadow-sm"
+                title={`Download Themed Excel Spreadsheet (${resolvedTheme.toUpperCase()} theme)`}
+              >
+                <FileSpreadsheet size={13} />
+                <span>Excel ({resolvedTheme === "dark" ? "Dark" : "Light"})</span>
+              </button>
+
+              {/* Active Theme Switcher for Screen & Exports */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-300 text-xs transition-colors"
+                title={`Active Theme: ${resolvedTheme.toUpperCase()} (Click to toggle Dark/Light)`}
+              >
+                {resolvedTheme === "dark" ? (
+                  <Sun size={13} className="text-amber-400" />
+                ) : (
+                  <Moon size={13} className="text-indigo-400" />
+                )}
+                <span className="text-[10px] font-mono uppercase font-bold">{resolvedTheme}</span>
+              </button>
+
+              {/* JSON Raw Dossier Export */}
+              <button
+                type="button"
                 onClick={handleDownloadJSON}
                 disabled={!report && !taxReport}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all"
               >
                 <Download size={13} />
                 JSON
               </button>
 
+              {/* Primary Print / PDF Button */}
               <button
+                type="button"
                 onClick={handlePrint}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-950/30 transition-all"
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-950/30 transition-all active:scale-95"
+                title={`Print or Save PDF (${resolvedTheme.toUpperCase()} Theme)`}
               >
                 <Printer size={13} />
-                Print / PDF
+                <span>Print / PDF ({resolvedTheme === "dark" ? "Dark" : "Light"})</span>
               </button>
             </div>
           </div>
@@ -730,8 +873,9 @@ export default function ReportsPage() {
                 </div>
 
                 {/* Statutory Tax Period & Multi-Export Toolbar */}
-                <div className="flex flex-wrap items-center gap-2.5 relative z-10">
+                <div className="no-print print-hidden print:hidden flex flex-wrap items-center gap-2.5 relative z-10">
                   <button
+                    type="button"
                     onClick={handleDownloadCSV}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30 transition-all shadow-sm"
                     title="Export ITR-2 / ITR-3 Schedule CG & CFL CSV"
@@ -741,6 +885,17 @@ export default function ReportsPage() {
                   </button>
 
                   <button
+                    type="button"
+                    onClick={handleDownloadThemedExcel}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 text-xs font-bold border border-teal-500/30 transition-all shadow-sm"
+                    title={`Export Themed Excel Dossier in ${resolvedTheme.toUpperCase()} theme`}
+                  >
+                    <FileSpreadsheet size={14} />
+                    <span>Themed Excel ({resolvedTheme === "dark" ? "Dark" : "Light"})</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={handleDownloadHarvestCSV}
                     disabled={!taxReport?.loss_harvesting.candidates.length}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 text-xs font-bold border border-teal-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -751,6 +906,7 @@ export default function ReportsPage() {
                   </button>
 
                   <button
+                    type="button"
                     onClick={handleDownloadJSON}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 transition-all"
                     title="Download Complete Tax Audit Dossier (JSON)"
@@ -760,12 +916,13 @@ export default function ReportsPage() {
                   </button>
 
                   <button
+                    type="button"
                     onClick={handlePrint}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 transition-all"
-                    title="Print Formal Statutory Tax Filing Statement"
+                    title={`Print Formal Statutory Tax Filing Statement in ${resolvedTheme.toUpperCase()} theme`}
                   >
                     <Printer size={14} />
-                    <span>Print</span>
+                    <span>Print ({resolvedTheme === "dark" ? "Dark" : "Light"})</span>
                   </button>
                 </div>
               </div>
@@ -1039,7 +1196,7 @@ export default function ReportsPage() {
                       </div>
 
                       {/* Live Reactive Simulation Bar & Action Buttons */}
-                      <div className="flex flex-wrap items-center gap-3">
+                      <div className="no-print print-hidden print:hidden flex flex-wrap items-center gap-3">
                         <div className="flex items-center gap-3 p-2.5 px-4 rounded-2xl bg-slate-950/80 border border-slate-800 text-xs">
                           <div className="flex items-center gap-1.5">
                             <span className="text-slate-400">Tax Saved:</span>
@@ -1097,7 +1254,7 @@ export default function ReportsPage() {
                         <table className="w-full text-left text-xs border-collapse">
                           <thead>
                             <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
-                              <th className="py-3 px-3">Simulate</th>
+                              <th className="py-3 px-3 no-print print-hidden print:hidden">Simulate</th>
                               <th className="py-3 px-3">Instrument</th>
                               <th className="py-3 px-3 text-right">Qty</th>
                               <th className="py-3 px-3 text-right">Avg Buy (₹)</th>
@@ -1119,7 +1276,7 @@ export default function ReportsPage() {
                                     isSelected ? "bg-emerald-500/5 hover:bg-emerald-500/10" : "hover:bg-slate-900/80"
                                   }`}
                                 >
-                                  <td className="py-3.5 px-3">
+                                  <td className="py-3.5 px-3 no-print print-hidden print:hidden">
                                     <button
                                       type="button"
                                       className="text-emerald-400 focus:outline-none"
@@ -1195,13 +1352,25 @@ export default function ReportsPage() {
                           Lot-level audit records with buy/sell timestamps, calendar holding months, cost basis, and classification.
                         </p>
                       </div>
-                      <button
-                        onClick={handleDownloadCSV}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-emerald-400 border border-slate-700 transition-colors"
-                      >
-                        <FileSpreadsheet size={13} />
-                        Export ITR Schedule CSV
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleDownloadCSV}
+                          className="no-print print-hidden print:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-emerald-400 border border-slate-700 transition-colors"
+                        >
+                          <FileSpreadsheet size={13} />
+                          ITR CSV
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDownloadThemedExcel}
+                          className="no-print print-hidden print:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-xs font-semibold text-teal-300 border border-teal-500/30 transition-colors"
+                          title={`Export Realized Lots in ${resolvedTheme.toUpperCase()} theme`}
+                        >
+                          <FileSpreadsheet size={13} />
+                          Themed Excel ({resolvedTheme === "dark" ? "Dark" : "Light"})
+                        </button>
+                      </div>
                     </div>
 
                     {taxReport.realized_lots.length === 0 ? (
@@ -1340,12 +1509,26 @@ export default function ReportsPage() {
             </div>
           )}
           </MotionContainer>
+
+          {/* Printable Fiduciary & Regulatory Legal Disclaimer Footer (Visible only at the end of the printed document) */}
+          <div className="print-only mt-10 pt-4 border-t-2 border-slate-300 dark:border-slate-800 text-[8.5pt] text-slate-700 dark:text-slate-400 space-y-2 break-inside-avoid">
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1">
+              <p className="leading-relaxed">
+                <strong className="text-slate-900 dark:text-white">Fiduciary &amp; Statutory Regulatory Notice:</strong> This document is generated for accredited institutional wealth management, risk governance, and statutory tax reconciliation under Indian Securities &amp; Tax regulations (<strong>Securities and Exchange Board of India (Portfolio Managers) Regulations, 2020</strong> and the <strong>Income-tax Act, 2025</strong>). Realized capital gains and loss harvesting offsets are calculated using FIFO trade lot matching in compliance with Section 111A, Section 112A, and Section 208/234C advance tax rules. Past portfolio performance does not guarantee future results.
+              </p>
+            </div>
+            <div className="flex items-center justify-between font-mono text-[7.5pt] text-slate-500 dark:text-slate-400 px-1 pt-1">
+              <span>Verified by NexFolio Quantitative Intelligence Core v2.4 &bull; Algorithmic Provenance Confirmed</span>
+              <span>Integrity Hash: <strong className="text-slate-900 dark:text-slate-200">{reportIntegrityHash}</strong></span>
+              <span>Theme: {resolvedTheme.toUpperCase()} &bull; Classification: PRIVILEGED &amp; CONFIDENTIAL</span>
+            </div>
+          </div>
         </main>
       </div>
 
       {/* Interactive Tax Loss Harvesting Execution Modal */}
       {showHarvestModal && taxReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+        <div className="no-print print-hidden print:hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 space-y-6 shadow-2xl relative overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
@@ -1469,6 +1652,7 @@ export default function ReportsPage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

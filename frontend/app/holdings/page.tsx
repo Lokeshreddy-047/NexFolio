@@ -32,6 +32,7 @@ import { DataPedigreeBadge } from "@/components/data-badge";
 import { useMarketFeed } from "@/lib/useMarketFeed";
 import { useToast } from "@/components/toast-provider";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { OrderExecutionModal } from "@/components/order-execution-modal";
 
 export default function HoldingsPage() {
   const router = useRouter();
@@ -65,6 +66,16 @@ export default function HoldingsPage() {
   // Add / Edit Modal states
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingHolding, setEditingHolding] = useState<HoldingItem | null>(null);
+
+  // Simulated Order Execution Modal
+  const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
+  const [selectedHoldingForTrade, setSelectedHoldingForTrade] = useState<{
+    symbol?: string;
+    companyName?: string;
+    sector?: string;
+    currentPrice?: number;
+    side: "BUY" | "SELL";
+  } | null>(null);
 
   // Stock search inside modal
   const [stockSearch, setStockSearch] = useState("");
@@ -405,6 +416,18 @@ export default function HoldingsPage() {
               </Link>
               <button
                 onClick={() => {
+                  setSelectedHoldingForTrade({
+                    side: "BUY"
+                  });
+                  setIsTradeModalOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-950/40 transition-all"
+              >
+                <Zap size={14} />
+                <span>Simulate Order</span>
+              </button>
+              <button
+                onClick={() => {
                   setSymbol("");
                   setCompanyName("");
                   setQuantity("");
@@ -526,6 +549,38 @@ export default function HoldingsPage() {
                           {/* Action Buttons */}
                           <td className="py-3.5 px-4 text-center">
                             <div className="flex items-center justify-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => {
+                                  setSelectedHoldingForTrade({
+                                    symbol: h.symbol,
+                                    companyName: h.company_name,
+                                    sector: h.sector,
+                                    currentPrice: h.current_price,
+                                    side: "BUY"
+                                  });
+                                  setIsTradeModalOpen(true);
+                                }}
+                                className="p-1.5 rounded-lg text-emerald-400 hover:text-white hover:bg-emerald-500/20 transition-colors"
+                                title="Buy More (Execute Order)"
+                              >
+                                <Plus size={14} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedHoldingForTrade({
+                                    symbol: h.symbol,
+                                    companyName: h.company_name,
+                                    sector: h.sector,
+                                    currentPrice: h.current_price,
+                                    side: "SELL"
+                                  });
+                                  setIsTradeModalOpen(true);
+                                }}
+                                className="p-1.5 rounded-lg text-rose-400 hover:text-white hover:bg-rose-500/20 transition-colors"
+                                title="Trim / Sell Position"
+                              >
+                                <ArrowDownRight size={14} />
+                              </button>
                               <button
                                 onClick={() => {
                                   setEditingHolding(h);
@@ -845,6 +900,22 @@ export default function HoldingsPage() {
         isLoading={deletingHolding}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteConfirmHolding(null)}
+      />
+
+      {/* Institutional Simulated Order Execution Modal */}
+      <OrderExecutionModal
+        isOpen={isTradeModalOpen}
+        onClose={() => {
+          setIsTradeModalOpen(false);
+          setSelectedHoldingForTrade(null);
+        }}
+        onOrderSettled={fetchHoldings}
+        defaultPortfolioId={selectedPortfolioId}
+        defaultSymbol={selectedHoldingForTrade?.symbol}
+        defaultCompanyName={selectedHoldingForTrade?.companyName}
+        defaultSector={selectedHoldingForTrade?.sector}
+        defaultPrice={selectedHoldingForTrade?.currentPrice}
+        defaultSide={selectedHoldingForTrade?.side || "BUY"}
       />
     </div>
   );

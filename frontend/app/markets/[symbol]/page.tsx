@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, use } from "react";
+import React, { useState, useEffect, useCallback, use, useMemo } from "react";
 import Link from "next/link";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
@@ -9,8 +9,6 @@ import {
   getStockDetail,
   toggleWatchlistSymbol,
   getWatchlists,
-  createTransaction,
-  getPortfolios,
   getStockNews,
   StockDetailResponse,
   WatchlistResponse,
@@ -26,31 +24,30 @@ import {
   Sparkles,
   RefreshCw,
   Newspaper,
-  X
+  BarChart3,
+  Activity
 } from "lucide-react";
 import { DataPedigreeBadge } from "@/components/data-badge";
-import { useToast } from "@/components/toast-provider";
+import { OrderExecutionModal } from "@/components/order-execution-modal";
 
 export default function StockDetailPage({ params }: { params: Promise<{ symbol: string }> }) {
   const resolvedParams = use(params);
   const rawSymbol = decodeURIComponent(resolvedParams.symbol);
-  const toast = useToast();
 
   const [stock, setStock] = useState<StockDetailResponse | null>(null);
   const [watchlists, setWatchlists] = useState<WatchlistResponse[]>([]);
   const [stockNews, setStockNews] = useState<NewsItem[]>([]);
   const [timeframe, setTimeframe] = useState<"1W" | "1M" | "3M" | "1Y" | "ALL">("1Y");
+  const [chartMode, setChartMode] = useState<"CANDLESTICK" | "AREA">("CANDLESTICK");
   const [showSMA, setShowSMA] = useState(true);
+  const [showRSI, setShowRSI] = useState(false);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Quick Trade Modal
+  // Order Execution Modal
   const [showTradeModal, setShowTradeModal] = useState(false);
-  const [tradeShares, setTradeShares] = useState(10);
-  const [tradePortfolioId, setTradePortfolioId] = useState("");
-  const [userPortfolios, setUserPortfolios] = useState<{ id: string; name: string }[]>([]);
-  const [executingTrade, setExecutingTrade] = useState(false);
-  const [tradeSuccess, setTradeSuccess] = useState<string | null>(null);
+  const [tradeSide, setTradeSide] = useState<"BUY" | "SELL">("BUY");
 
   const primaryWatchlistId = watchlists.length > 0 ? watchlists[0].id : null;
 
@@ -59,19 +56,14 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     try {
       setLoading(true);
       setError(null);
-      const [detailRes, wlRes, portRes, newsRes] = await Promise.all([
+      const [detailRes, wlRes, newsRes] = await Promise.all([
         getStockDetail(rawSymbol),
         getWatchlists().catch(() => []),
-        getPortfolios().catch(() => []),
         getStockNews(rawSymbol).catch(() => [])
       ]);
       setStock(detailRes);
       setWatchlists(wlRes);
       setStockNews(newsRes);
-      setUserPortfolios(portRes.map(p => ({ id: p.id, name: p.name })));
-      if (portRes.length > 0) {
-        setTradePortfolioId(portRes[0].id);
-      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load stock details.");
     } finally {
@@ -94,35 +86,8 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     }
   };
 
-  // 3. Execute Trade
-  const handleExecuteTrade = async () => {
-    if (!stock || !tradePortfolioId) return;
-    try {
-      setExecutingTrade(true);
-      await createTransaction({
-        portfolio_id: tradePortfolioId,
-        transaction_type: "BUY",
-        symbol: stock.symbol,
-        quantity: tradeShares,
-        price: stock.current_price,
-        notes: `Order executed from ${stock.base_symbol} Detail page`
-      });
-      toast.success("Order Executed", `Purchased ${tradeShares} shares of ${stock.base_symbol}.`);
-      setTradeSuccess(`Successfully purchased ${tradeShares} shares of ${stock.base_symbol}!`);
-      setTimeout(() => {
-        setShowTradeModal(false);
-        setTradeSuccess(null);
-      }, 1500);
-      loadStockData();
-    } catch (err: unknown) {
-      toast.error("Trade Execution Error", err instanceof Error ? err.message : "Trade recording failed.");
-    } finally {
-      setExecutingTrade(false);
-    }
-  };
-
-  // 4. Sliced Price History according to selected timeframe
-  const filteredHistory = React.useMemo(() => {
+  // 3. Sliced Price History according to selected timeframe
+  const filteredHistory = useMemo(() => {
     if (!stock || !stock.price_history) return [];
     const h = stock.price_history;
     if (timeframe === "1W") return h.slice(-5);
@@ -132,22 +97,79 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
     return h;
   }, [stock, timeframe]);
 
-  // SVG Chart Metrics
-  const chartPoints = React.useMemo(() => {
-    if (filteredHistory.length === 0) return { line: "", sma20: "", sma50: "", minP: 0, maxP: 1 };
-    const prices = filteredHistory.map(p => p.close);
-    const minP = Math.min(...prices) * 0.98;
-    const maxP = Math.max(...prices) * 1.02;
-    const range = maxP - minP || 1;
+  // 4. RSI (14-period) calculation
+  const rsiSeries = useMemo(() => {
+    if (filteredHistory.length < 15) return [];
+    const closes = filteredHistory.map(p => p.close);
+    const rsi: (number | null)[] = new Array(closes.length).fill(null);
+    let gains = 0;
+    let losses = 0;
+    const period = 14;
+
+    for (let i = 1; i <= period; i++) {
+      const diff = closes[i] - closes[i - 1];
+      if (diff >= 0) gains += diff;
+      else losses += Math.abs(diff);
+    }
+
+    let avgGain = gains / period;
+    let avgLoss = losses / period;
+    rsi[period] = avgLoss === 0 ? 100 : 100 - (100 / (1 + avgGain / avgLoss));
+
+    for (let i = period + 1; i < closes.length; i++) {
+      const diff = closes[i] - closes[i - 1];
+      const gain = diff > 0 ? diff : 0;
+      const loss = diff < 0 ? Math.abs(diff) : 0;
+      avgGain = (avgGain * (period - 1) + gain) / period;
+      avgLoss = (avgLoss * (period - 1) + loss) / period;
+      rsi[i] = avgLoss === 0 ? 100 : 100 - (100 / (1 + avgGain / avgLoss));
+    }
+
+    return rsi;
+  }, [filteredHistory]);
+
+  // 5. SVG Technical Chart Coordinates
+  const chartPoints = useMemo(() => {
+    if (filteredHistory.length === 0) {
+      return {
+        line: "",
+        area: "",
+        sma20: "",
+        sma50: "",
+        rsiLine: "",
+        minP: 0,
+        maxP: 1,
+        candles: [],
+        volumeBars: [],
+        width: 800,
+        priceHeight: 190,
+        totalHeight: showRSI ? 320 : 250
+      };
+    }
 
     const width = 800;
-    const height = 240;
+    const priceHeight = 185;
+    const volumeHeight = 50;
+    const volumeYStart = 195;
+    const totalHeight = showRSI ? 320 : 250;
 
-    const getX = (idx: number) => (idx / (filteredHistory.length - 1 || 1)) * width;
-    const getY = (price: number) => height - ((price - minP) / range) * height;
+    const highs = filteredHistory.map(p => p.high);
+    const lows = filteredHistory.map(p => p.low);
+    const volumes = filteredHistory.map(p => p.volume);
 
+    const minP = Math.min(...lows) * 0.985;
+    const maxP = Math.max(...highs) * 1.015;
+    const range = maxP - minP || 1;
+    const maxVol = Math.max(...volumes, 1);
+
+    const getX = (idx: number) => (idx / (filteredHistory.length - 1 || 1)) * (width - 40) + 20;
+    const getY = (price: number) => priceHeight - ((price - minP) / range) * priceHeight + 10;
+
+    // Line & Area coordinates
     const line = filteredHistory.map((p, i) => `${getX(i)},${getY(p.close)}`).join(" ");
+    const area = `${getX(0)},${priceHeight + 10} ` + line + ` ${getX(filteredHistory.length - 1)},${priceHeight + 10}`;
 
+    // Moving Averages
     const sma20Pts = filteredHistory
       .map((p, i) => p.sma_20 ? `${getX(i)},${getY(p.sma_20)}` : null)
       .filter(Boolean)
@@ -158,8 +180,74 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
       .filter(Boolean)
       .join(" ");
 
-    return { line, sma20: sma20Pts, sma50: sma50Pts, minP, maxP };
-  }, [filteredHistory]);
+    // Candlesticks
+    const candleWidth = Math.max(2, Math.min(10, ((width - 40) / filteredHistory.length) * 0.65));
+    const candles = filteredHistory.map((p, i) => {
+      const cx = getX(i);
+      const isBull = p.close >= p.open;
+      const openY = getY(p.open);
+      const closeY = getY(p.close);
+      const highY = getY(p.high);
+      const lowY = getY(p.low);
+      const bodyTop = Math.min(openY, closeY);
+      const bodyHeight = Math.max(1.5, Math.abs(closeY - openY));
+
+      return {
+        x: cx,
+        isBull,
+        highY,
+        lowY,
+        bodyTop,
+        bodyHeight,
+        candleWidth,
+        point: p
+      };
+    });
+
+    // Volume Bars
+    const volumeBars = filteredHistory.map((p, i) => {
+      const cx = getX(i);
+      const isBull = p.close >= p.open;
+      const h = (p.volume / maxVol) * volumeHeight;
+      const y = volumeYStart + (volumeHeight - h);
+      return {
+        x: cx - candleWidth / 2,
+        y,
+        width: candleWidth,
+        height: Math.max(1, h),
+        isBull,
+        volume: p.volume
+      };
+    });
+
+    // RSI line (Y from 265 to 315)
+    let rsiLine = "";
+    if (showRSI && rsiSeries.length > 0) {
+      const rsiTop = 265;
+      const rsiHeight = 50;
+      rsiLine = rsiSeries
+        .map((r, i) => (r !== null ? `${getX(i)},${rsiTop + rsiHeight - (r / 100) * rsiHeight}` : null))
+        .filter(Boolean)
+        .join(" ");
+    }
+
+    return {
+      line,
+      area,
+      sma20: sma20Pts,
+      sma50: sma50Pts,
+      rsiLine,
+      minP,
+      maxP,
+      candles,
+      volumeBars,
+      width,
+      priceHeight,
+      totalHeight
+    };
+  }, [filteredHistory, showRSI, rsiSeries]);
+
+  const activeHoverPoint = hoverIndex !== null && filteredHistory[hoverIndex] ? filteredHistory[hoverIndex] : null;
 
   return (
     <div className="flex min-h-screen bg-[#030712] text-slate-100 font-sans antialiased">
@@ -255,11 +343,25 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                     </button>
 
                     <button
-                      onClick={() => setShowTradeModal(true)}
-                      className="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-xs font-extrabold tracking-wider uppercase transition-all shadow-lg shadow-emerald-950/40 flex items-center gap-2"
+                      onClick={() => {
+                        setTradeSide("BUY");
+                        setShowTradeModal(true);
+                      }}
+                      className="px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-xs font-extrabold tracking-wider uppercase transition-all shadow-lg shadow-emerald-950/40 flex items-center gap-1.5"
                     >
-                      <Zap size={16} />
-                      Trade / Buy
+                      <Zap size={15} />
+                      Buy
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setTradeSide("SELL");
+                        setShowTradeModal(true);
+                      }}
+                      className="px-4 py-3 rounded-2xl bg-slate-900 hover:bg-rose-950/40 text-rose-300 border border-rose-500/30 hover:border-rose-500/60 text-xs font-extrabold tracking-wider uppercase transition-all flex items-center gap-1.5"
+                    >
+                      <Zap size={15} />
+                      Sell / Short
                     </button>
                   </div>
                 </div>
@@ -281,108 +383,282 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                 </div>
               </div>
 
-              {/* Row 2: Price Chart & Moving Averages (8 cols) & Key Fundamentals (4 cols) */}
+              {/* Row 2: Interactive Price Chart & Moving Averages (8 cols) & Key Fundamentals (4 cols) */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* 1. Price History Chart Card (8 cols) */}
+                {/* 1. Interactive Technical Price Chart Card (8 cols) */}
                 <div className="lg:col-span-8 p-6 rounded-3xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md space-y-4 flex flex-col justify-between">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h3 className="text-base font-bold text-white">Historical Price Trajectory</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-bold text-white">Interactive Price & Technical Trajectory</h3>
+                        <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+                          {chartMode}
+                        </span>
+                      </div>
                       <p className="text-xs text-slate-400">
-                        Institutional OHLC series with SMA-20 and SMA-50 technical trend overlays
+                        Institutional OHLC candlesticks with volume histogram, SMA-20/50, and 14-period RSI
                       </p>
                     </div>
 
-                    {/* Timeframe selector */}
-                    <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-950 border border-slate-800 text-xs">
-                      {(["1W", "1M", "3M", "1Y", "ALL"] as const).map(tf => (
+                    {/* Chart Mode & Timeframe Controls */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Candlestick vs Area toggle */}
+                      <div className="flex p-1 rounded-xl bg-slate-950 border border-slate-800 text-xs">
                         <button
-                          key={tf}
-                          onClick={() => setTimeframe(tf)}
-                          className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                            timeframe === tf
-                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                              : "text-slate-400 hover:text-slate-200"
+                          onClick={() => setChartMode("CANDLESTICK")}
+                          className={`px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
+                            chartMode === "CANDLESTICK"
+                              ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+                              : "text-slate-400 hover:text-white"
                           }`}
                         >
-                          {tf}
+                          <BarChart3 size={13} />
+                          Candles
                         </button>
-                      ))}
+                        <button
+                          onClick={() => setChartMode("AREA")}
+                          className={`px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
+                            chartMode === "AREA"
+                              ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+                              : "text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          <Activity size={13} />
+                          Line
+                        </button>
+                      </div>
+
+                      {/* Timeframe selector */}
+                      <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-950 border border-slate-800 text-xs">
+                        {(["1W", "1M", "3M", "1Y", "ALL"] as const).map(tf => (
+                          <button
+                            key={tf}
+                            onClick={() => setTimeframe(tf)}
+                            className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                              timeframe === tf
+                                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                                : "text-slate-400 hover:text-slate-200"
+                            }`}
+                          >
+                            {tf}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
-                  {/* SVG Price Chart */}
-                  <div className="relative w-full h-64 bg-slate-950/60 rounded-2xl border border-slate-800/80 p-4 flex flex-col justify-between overflow-hidden">
-                    {chartPoints.line ? (
-                      <svg viewBox="0 0 800 240" className="w-full h-full overflow-visible">
+                  {/* Active Crosshair Inspection Pill */}
+                  {activeHoverPoint ? (
+                    <div className="flex flex-wrap items-center gap-4 px-3.5 py-1.5 rounded-xl bg-slate-950 border border-indigo-500/30 text-xs font-mono">
+                      <span className="text-slate-300 font-bold">{activeHoverPoint.date}</span>
+                      <span>O: <strong className="text-white">₹{activeHoverPoint.open.toFixed(2)}</strong></span>
+                      <span>H: <strong className="text-emerald-400">₹{activeHoverPoint.high.toFixed(2)}</strong></span>
+                      <span>L: <strong className="text-rose-400">₹{activeHoverPoint.low.toFixed(2)}</strong></span>
+                      <span>C: <strong className="text-white font-black">₹{activeHoverPoint.close.toFixed(2)}</strong></span>
+                      <span>Vol: <strong className="text-slate-300">{activeHoverPoint.volume.toLocaleString("en-IN")}</strong></span>
+                      {activeHoverPoint.sma_20 && (
+                        <span className="text-teal-400">SMA20: ₹{activeHoverPoint.sma_20.toFixed(2)}</span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between px-3.5 py-1.5 text-xs text-slate-500 font-medium">
+                      <span>Hover along chart to inspect OHLCV candle parameters</span>
+                      <span className="font-mono">Current: ₹{stock.current_price.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {/* SVG Technical Canvas */}
+                  <div
+                    className="relative w-full bg-slate-950/70 rounded-2xl border border-slate-800/80 p-4 overflow-hidden"
+                    style={{ height: showRSI ? "360px" : "290px" }}
+                  >
+                    {filteredHistory.length > 0 ? (
+                      <svg
+                        viewBox={`0 0 ${chartPoints.width} ${chartPoints.totalHeight}`}
+                        className="w-full h-full cursor-crosshair overflow-visible"
+                        onMouseMove={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const svgX = ((e.clientX - rect.left) / rect.width) * chartPoints.width;
+                          const idx = Math.min(
+                            filteredHistory.length - 1,
+                            Math.max(0, Math.round(((svgX - 20) / (chartPoints.width - 40)) * (filteredHistory.length - 1)))
+                          );
+                          setHoverIndex(idx);
+                        }}
+                        onMouseLeave={() => setHoverIndex(null)}
+                      >
                         <defs>
-                          <linearGradient id="stockPriceGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+                          <linearGradient id="areaStockGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
                             <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
                           </linearGradient>
                         </defs>
 
-                        {/* Grid lines */}
-                        <line x1="0" y1="60" x2="800" y2="60" stroke="#334155" strokeDasharray="3 3" opacity="0.3" />
-                        <line x1="0" y1="120" x2="800" y2="120" stroke="#334155" strokeDasharray="3 3" opacity="0.3" />
-                        <line x1="0" y1="180" x2="800" y2="180" stroke="#334155" strokeDasharray="3 3" opacity="0.3" />
+                        {/* Grid Lines */}
+                        <line x1="20" y1="45" x2="780" y2="45" stroke="#1e293b" strokeDasharray="3 3" />
+                        <line x1="20" y1="95" x2="780" y2="95" stroke="#1e293b" strokeDasharray="3 3" />
+                        <line x1="20" y1="145" x2="780" y2="145" stroke="#1e293b" strokeDasharray="3 3" />
+                        <line x1="20" y1="195" x2="780" y2="195" stroke="#334155" strokeWidth="1" />
 
-                        {/* SMA 50 Line (Indigo) */}
+                        {/* Volume Histogram Bars */}
+                        {chartPoints.volumeBars.map((vb, i) => (
+                          <rect
+                            key={`vol-${i}`}
+                            x={vb.x}
+                            y={vb.y}
+                            width={vb.width}
+                            height={vb.height}
+                            fill={vb.isBull ? "#10b981" : "#f43f5e"}
+                            opacity={hoverIndex === i ? 0.8 : 0.35}
+                            rx={1}
+                          />
+                        ))}
+
+                        {/* Chart Render: Area or Candlesticks */}
+                        {chartMode === "AREA" ? (
+                          <>
+                            {/* Area Fill */}
+                            <polygon fill="url(#areaStockGrad)" points={chartPoints.area} />
+                            {/* Main Line */}
+                            <polyline
+                              fill="none"
+                              stroke="#10b981"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              points={chartPoints.line}
+                            />
+                          </>
+                        ) : (
+                          /* Candlestick Render */
+                          <>
+                            {chartPoints.candles.map((c, i) => (
+                              <g key={`candle-${i}`}>
+                                {/* Wick (High to Low) */}
+                                <line
+                                  x1={c.x}
+                                  y1={c.highY}
+                                  x2={c.x}
+                                  y2={c.lowY}
+                                  stroke={c.isBull ? "#10b981" : "#f43f5e"}
+                                  strokeWidth={hoverIndex === i ? 2 : 1.2}
+                                />
+                                {/* Candle Body */}
+                                <rect
+                                  x={c.x - c.candleWidth / 2}
+                                  y={c.bodyTop}
+                                  width={c.candleWidth}
+                                  height={c.bodyHeight}
+                                  fill={c.isBull ? "#10b981" : "#f43f5e"}
+                                  stroke={c.isBull ? "#059669" : "#e11d48"}
+                                  strokeWidth={0.5}
+                                  rx={1}
+                                />
+                              </g>
+                            ))}
+                          </>
+                        )}
+
+                        {/* SMA-50 Line (Indigo) */}
                         {showSMA && chartPoints.sma50 && (
                           <polyline
                             fill="none"
                             stroke="#818cf8"
-                            strokeWidth="1.5"
+                            strokeWidth="1.8"
                             strokeDasharray="4 2"
                             points={chartPoints.sma50}
                           />
                         )}
 
-                        {/* SMA 20 Line (Teal) */}
+                        {/* SMA-20 Line (Teal) */}
                         {showSMA && chartPoints.sma20 && (
                           <polyline
                             fill="none"
                             stroke="#2dd4bf"
-                            strokeWidth="1.5"
+                            strokeWidth="2"
                             points={chartPoints.sma20}
                           />
                         )}
 
-                        {/* Main Close Price Line (Emerald) */}
-                        <polyline
-                          fill="none"
-                          stroke="#10b981"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          points={chartPoints.line}
-                        />
+                        {/* RSI Indicator Pane (when active) */}
+                        {showRSI && (
+                          <g transform="translate(0, 260)">
+                            {/* RSI Divider & Axis Lines */}
+                            <line x1="20" y1="0" x2="780" y2="0" stroke="#334155" strokeWidth="1" />
+                            {/* Overbought 70 line */}
+                            <line x1="20" y1="15" x2="780" y2="15" stroke="#f43f5e" strokeDasharray="3 3" opacity="0.6" />
+                            <text x="785" y="18" fill="#f43f5e" fontSize="9" fontFamily="monospace">70</text>
+                            {/* Oversold 30 line */}
+                            <line x1="20" y1="35" x2="780" y2="35" stroke="#10b981" strokeDasharray="3 3" opacity="0.6" />
+                            <text x="785" y="38" fill="#10b981" fontSize="9" fontFamily="monospace">30</text>
+                            {/* RSI Line */}
+                            {chartPoints.rsiLine && (
+                              <polyline
+                                fill="none"
+                                stroke="#f59e0b"
+                                strokeWidth="2"
+                                points={chartPoints.rsiLine}
+                              />
+                            )}
+                            <text x="25" y="12" fill="#f59e0b" fontSize="10" fontWeight="bold">RSI (14)</text>
+                          </g>
+                        )}
+
+                        {/* Vertical Crosshair Line */}
+                        {hoverIndex !== null && filteredHistory[hoverIndex] && (
+                          <line
+                            x1={chartPoints.candles[hoverIndex]?.x || 0}
+                            y1="10"
+                            x2={chartPoints.candles[hoverIndex]?.x || 0}
+                            y2={chartPoints.totalHeight - 10}
+                            stroke="#e2e8f0"
+                            strokeDasharray="2 2"
+                            opacity="0.5"
+                          />
+                        )}
                       </svg>
                     ) : (
                       <div className="flex items-center justify-center h-full text-slate-500 text-xs">
                         No historical candle observations available for this timeframe.
                       </div>
                     )}
+                  </div>
 
-                    {/* Chart Legend & Toggles */}
-                    <div className="flex items-center justify-between text-[11px] pt-2 border-t border-slate-800/60">
-                      <div className="flex items-center gap-4">
-                        <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
-                          <span className="w-2.5 h-0.5 bg-emerald-400" /> Close Price
+                  {/* Chart Legend & Indicator Toggles */}
+                  <div className="flex flex-wrap items-center justify-between text-[11px] pt-1">
+                    <div className="flex items-center gap-4">
+                      <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                        <span className="w-2.5 h-0.5 bg-emerald-400" /> Price / Candle
+                      </span>
+                      {showSMA && (
+                        <>
+                          <span className="flex items-center gap-1.5 text-teal-300 font-medium">
+                            <span className="w-2.5 h-0.5 bg-teal-400" /> SMA-20
+                          </span>
+                          <span className="flex items-center gap-1.5 text-indigo-300 font-medium">
+                            <span className="w-2.5 h-0.5 bg-indigo-400" /> SMA-50
+                          </span>
+                        </>
+                      )}
+                      {showRSI && (
+                        <span className="flex items-center gap-1.5 text-amber-400 font-medium">
+                          <span className="w-2.5 h-0.5 bg-amber-400" /> RSI (14)
                         </span>
-                        <span className="flex items-center gap-1.5 text-teal-300 font-medium">
-                          <span className="w-2.5 h-0.5 bg-teal-400" /> SMA-20
-                        </span>
-                        <span className="flex items-center gap-1.5 text-indigo-300 font-medium">
-                          <span className="w-2.5 h-0.5 bg-indigo-400" /> SMA-50
-                        </span>
-                      </div>
+                      )}
+                    </div>
 
+                    <div className="flex items-center gap-3">
                       <button
                         onClick={() => setShowSMA(!showSMA)}
-                        className="text-slate-400 hover:text-white font-semibold transition-colors"
+                        className={`font-semibold transition-colors ${showSMA ? "text-teal-400" : "text-slate-500 hover:text-slate-300"}`}
                       >
-                        {showSMA ? "Hide Overlays" : "Show Overlays"}
+                        {showSMA ? "✓ Overlays (SMA)" : "+ Overlays (SMA)"}
+                      </button>
+                      <button
+                        onClick={() => setShowRSI(!showRSI)}
+                        className={`font-semibold transition-colors ${showRSI ? "text-amber-400" : "text-slate-500 hover:text-slate-300"}`}
+                      >
+                        {showRSI ? "✓ RSI Pane" : "+ RSI Pane"}
                       </button>
                     </div>
                   </div>
@@ -410,6 +686,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                   </div>
                 </div>
               </div>
+
 
               {/* Row 3: Portfolio Exposure & AI Bridge Context */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -543,81 +820,18 @@ export default function StockDetailPage({ params }: { params: Promise<{ symbol: 
                 </div>
               )}
 
-              {/* Trade Modal */}
-              {showTradeModal && (
-                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-                  <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl relative">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-base font-bold text-white">Record Buy Order</h3>
-                        <p className="text-xs text-slate-400">{stock.company_name} ({stock.base_symbol})</p>
-                      </div>
-                      <button
-                        onClick={() => setShowTradeModal(false)}
-                        className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
-                      >
-                        <X size={18} />
-                      </button>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-xs font-semibold text-slate-400 block mb-1">Target Portfolio</label>
-                        <select
-                          value={tradePortfolioId}
-                          onChange={e => setTradePortfolioId(e.target.value)}
-                          className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
-                        >
-                          {userPortfolios.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs font-semibold text-slate-400 block mb-1">Quantity (Shares)</label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={tradeShares}
-                            onChange={e => setTradeShares(Math.max(1, parseInt(e.target.value) || 1))}
-                            className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-mono font-bold"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-semibold text-slate-400 block mb-1">Market Price</label>
-                          <div className="px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-emerald-400 font-mono font-bold">
-                            ₹{stock.current_price}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex justify-between items-center text-xs">
-                        <span className="text-slate-400">Total Order Value:</span>
-                        <span className="text-sm font-black text-white font-mono">
-                          ₹{(tradeShares * stock.current_price).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-
-                      {tradeSuccess && (
-                        <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold text-center">
-                          {tradeSuccess}
-                        </div>
-                      )}
-
-                      <button
-                        onClick={handleExecuteTrade}
-                        disabled={executingTrade}
-                        className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-950/40 disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        {executingTrade ? <RefreshCw size={14} className="animate-spin" /> : <Zap size={14} />}
-                        {executingTrade ? "Recording Order..." : "Confirm & Add to Portfolio"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
+              {/* Institutional Order Execution Modal */}
+              {stock && (
+                <OrderExecutionModal
+                  isOpen={showTradeModal}
+                  onClose={() => setShowTradeModal(false)}
+                  onOrderSettled={loadStockData}
+                  defaultSymbol={stock.symbol}
+                  defaultCompanyName={stock.company_name}
+                  defaultSector={stock.sector}
+                  defaultPrice={stock.current_price}
+                  defaultSide={tradeSide}
+                />
               )}
             </>
           )}
