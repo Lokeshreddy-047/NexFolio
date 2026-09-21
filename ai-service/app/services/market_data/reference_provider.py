@@ -235,35 +235,35 @@ class ReferenceMarketProvider(MarketDataProvider):
         indices = [
             MarketIndex(
                 symbol="^NSEI",
-                name="NIFTY 50 Benchmark",
-                current_level=24252.00,
-                day_change=173.70,
-                day_change_pct=0.72,
-                sparkline=[24080.0, 24120.0, 24190.0, 24210.0, 24240.0, 24252.00]
+                name="NIFTY 50",
+                current_level=25380.00,
+                day_change=142.50,
+                day_change_pct=0.56,
+                sparkline=[25220.0, 25260.0, 25310.0, 25340.0, 25370.0, 25380.00]
             ),
             MarketIndex(
                 symbol="^BSESN",
-                name="BSE SENSEX",
-                current_level=77540.83,
-                day_change=631.13,
-                day_change_pct=0.82,
-                sparkline=[76950.0, 77120.0, 77310.0, 77450.0, 77500.0, 77540.83]
+                name="SENSEX",
+                current_level=83120.50,
+                day_change=480.20,
+                day_change_pct=0.58,
+                sparkline=[82600.0, 82750.0, 82910.0, 83050.0, 83100.0, 83120.50]
             ),
             MarketIndex(
                 symbol="^NSEBANK",
-                name="NIFTY Bank Index",
-                current_level=57761.95,
-                day_change=522.15,
-                day_change_pct=0.91,
-                sparkline=[57250.0, 57350.0, 57520.0, 57610.0, 57700.0, 57761.95]
+                name="BANK NIFTY",
+                current_level=52450.75,
+                day_change=310.40,
+                day_change_pct=0.60,
+                sparkline=[52100.0, 52200.0, 52310.0, 52390.0, 52420.0, 52450.75]
             ),
             MarketIndex(
                 symbol="^CNXIT",
-                name="NIFTY IT Sector",
-                current_level=30532.25,
-                day_change=99.15,
-                day_change_pct=0.33,
-                sparkline=[30440.0, 30480.0, 30500.0, 30520.0, 30510.0, 30532.25]
+                name="NIFTY IT",
+                current_level=41280.60,
+                day_change=215.10,
+                day_change_pct=0.52,
+                sparkline=[41050.0, 41100.0, 41180.0, 41220.0, 41250.0, 41280.60]
             ),
         ]
 
@@ -523,13 +523,23 @@ class ReferenceMarketProvider(MarketDataProvider):
     async def get_batch_quotes(self, symbols: List[str]) -> Dict[str, Dict[str, float]]:
         self._init_market_data()
         res: Dict[str, Dict[str, float]] = {}
+        index_map = {
+            "^NSEI": {"price": 25380.00, "day_change": 142.50, "day_change_pct": 0.56, "volume": 1250000.0},
+            "^BSESN": {"price": 83120.50, "day_change": 480.20, "day_change_pct": 0.58, "volume": 850000.0},
+            "^NSEBANK": {"price": 52450.75, "day_change": 310.40, "day_change_pct": 0.60, "volume": 950000.0},
+            "^CNXIT": {"price": 41280.60, "day_change": 215.10, "day_change_pct": 0.52, "volume": 650000.0},
+        }
         for s in symbols:
-            clean = s.strip().upper()
-            if not clean.endswith(".NS"):
+            raw = s.strip()
+            clean = raw.upper()
+            if clean in index_map:
+                res[raw] = index_map[clean]
+                continue
+            if not clean.endswith(".NS") and not clean.startswith("^"):
                 clean = f"{clean}.NS"
             info = self._latest_stock_cache.get(clean)
             if info:
-                res[clean] = {
+                res[raw] = {
                     "price": float(info["current_price"]),
                     "day_change": float(info["day_change"]),
                     "day_change_pct": float(info["day_change_pct"]),

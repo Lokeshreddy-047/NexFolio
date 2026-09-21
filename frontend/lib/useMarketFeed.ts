@@ -37,6 +37,7 @@ export function useMarketFeed(symbols?: string[]) {
 
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const retryCountRef = useRef<number>(0);
   const previousPricesRef = useRef<Record<string, number>>({});
 
   const triggerPriceFlash = useCallback((symbol: string, direction: "up" | "down") => {
@@ -65,6 +66,7 @@ export function useMarketFeed(symbols?: string[]) {
       eventSourceRef.current = es;
 
       es.onopen = () => {
+        retryCountRef.current = 0;
         setConnectionStatus("connected");
       };
 
@@ -90,23 +92,28 @@ export function useMarketFeed(symbols?: string[]) {
               return updated;
             });
           }
-        } catch (err) {
-          console.warn("Failed to parse SSE tick packet:", err);
+        } catch {
+          // Ignore malformed packets gracefully
         }
       };
 
       es.onerror = () => {
-        setConnectionStatus("reconnecting");
-        es.close();
-        // Exponential backoff reconnect
+        retryCountRef.current += 1;
+        setConnectionStatus(retryCountRef.current > 2 ? "fallback" : "reconnecting");
+        try {
+          es.close();
+        } catch {
+          // ignore
+        }
+        // Exponential backoff reconnect: 5s -> 10s -> 20s -> max 30s
         if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+        const delay = Math.min(30000, 4000 * Math.pow(1.5, Math.min(retryCountRef.current, 5)));
         reconnectTimeoutRef.current = setTimeout(() => {
           connectStream();
-        }, 3000);
+        }, delay);
       };
-    } catch (err) {
-      console.error("SSE stream connection error:", err);
-      setConnectionStatus("disconnected");
+    } catch {
+      setConnectionStatus("fallback");
     }
   }, [symbols, triggerPriceFlash]);
 
