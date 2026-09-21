@@ -17,22 +17,29 @@ router = APIRouter()
 async def get_ipos(
     status: Optional[IPOStatus] = Query(None, description="Filter by IPO status (UPCOMING, OPEN, CLOSED, LISTED)"),
     market_type: Optional[IPOMarketType] = Query(None, description="Filter by market type (MAINBOARD, SME)"),
-    verdict: Optional[IPORiskVerdict] = Query(None, description="Filter by AI Risk Verdict")
+    verdict: Optional[IPORiskVerdict] = Query(None, description="Filter by AI Risk Verdict"),
+    force_refresh: bool = Query(False, description="Bypass cache and sync live feed quotes")
 ):
     """Returns all tracked Indian IPOs with live subscription, GMP, and AI risk analysis."""
-    return await ipo_service.get_all_ipos(status=status, market_type=market_type, verdict=verdict)
+    return await ipo_service.get_all_ipos(
+        status=status, market_type=market_type, verdict=verdict, force_refresh=force_refresh
+    )
 
 
 @router.get("/metrics/overview", response_model=IPOOverviewMetrics, summary="Get IPO overview statistics")
-async def get_ipo_overview_metrics():
+async def get_ipo_overview_metrics(
+    force_refresh: bool = Query(False, description="Bypass cache and sync live feed metrics")
+):
     """Returns top-level KPIs including active issues, total capital raised, and average listing gains."""
-    return await ipo_service.get_overview_metrics()
+    return await ipo_service.get_overview_metrics(force_refresh=force_refresh)
 
 
 @router.get("/performance/listed", response_model=List[ListedIPOPosPerformance], summary="Get post-listing performance")
-async def get_listed_ipos_performance():
+async def get_listed_ipos_performance(
+    force_refresh: bool = Query(False, description="Bypass cache and sync live exchange quotes")
+):
     """Returns issue price vs current market price returns for recently listed IPOs."""
-    return await ipo_service.get_listed_performance()
+    return await ipo_service.get_listed_performance(force_refresh=force_refresh)
 
 
 @router.get("/{ipo_id}", response_model=IPOItem, summary="Get detailed IPO breakdown")

@@ -19,7 +19,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className="antialiased selection:bg-emerald-500/20 selection:text-emerald-300 relative min-h-screen bg-[#030712] text-slate-100 overflow-x-hidden"
+        className="antialiased selection:bg-emerald-500/20 selection:text-emerald-300 relative min-h-screen bg-[#030712] text-slate-100 overflow-x-clip"
         suppressHydrationWarning
       >
         {/* Ambient Aurora Glow Spheres (Fixed in Background) */}

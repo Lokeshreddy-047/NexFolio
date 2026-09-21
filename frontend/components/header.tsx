@@ -142,19 +142,19 @@ export function Header({
 
       <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 md:px-8 bg-[#030712]/85 backdrop-blur-2xl border-b border-white/[0.08]">
         {/* Left: Title & Subtitle */}
-        <div className="flex flex-col min-w-0 pl-12 lg:pl-0">
+        <div className="flex flex-col min-w-0 pl-12 lg:pl-0 flex-1 mr-4">
           <h1 className="text-lg md:text-xl font-black tracking-tight text-white truncate flex items-center gap-2">
             {title}
           </h1>
           {subtitle && (
-            <p className="text-xs text-slate-400 truncate hidden sm:block">
+            <p className="text-xs text-slate-400 truncate hidden 2xl:block">
               {subtitle}
             </p>
           )}
         </div>
 
         {/* Right: Portfolio Selector & Controls */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           {/* Quick Spotlight Search Trigger */}
           <button
             onClick={() => {
@@ -162,7 +162,7 @@ export function Header({
                 new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true })
               );
             }}
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-400 hover:text-slate-200 text-xs transition-all shadow-inner"
+            className="hidden 2xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-400 hover:text-slate-200 text-xs transition-all shadow-inner"
             title="Search commands, stocks & actions (⌘K)"
           >
             <Search size={14} className="text-slate-400" />

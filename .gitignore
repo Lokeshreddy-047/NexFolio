@@ -25,6 +25,8 @@ frontend/.env.local
 # Node
 # =========================
 node_modules/
+.next/
+*.tsbuildinfo
 
 # =========================
 # IDE / OS
@@ -77,10 +79,8 @@ ai-service/**/__pycache__/
 .vercel
 
 # =========================
-# Academic Presentations & Binaries
+# Playwright MCP & Local Test Artifacts
 # =========================
-*.pptx
-*.ppt
-*.pdf
-!docs/**/*.pdf
+.playwright-mcp/
+/*.png
 

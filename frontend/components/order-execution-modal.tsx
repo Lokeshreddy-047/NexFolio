@@ -94,9 +94,9 @@ export function OrderExecutionModal({
       getPortfolios()
         .then((res) => {
           setPortfolios(res);
-          if (res.length > 0 && !portfolioId) {
+          if (res.length > 0) {
             const def = res.find((p) => p.is_default) || res[0];
-            setPortfolioId(defaultPortfolioId || def.id);
+            setPortfolioId((prev) => prev || defaultPortfolioId || def.id);
           }
         })
         .catch(() => {});

@@ -53,17 +53,20 @@ export default function IPOPage() {
   const [selectedIPO, setSelectedIPO] = useState<IPOItem | null>(null);
   const [calculatorLots, setCalculatorLots] = useState<number>(1);
 
-  const fetchData = useCallback(async () => {
+  const [lastSyncedAt, setLastSyncedAt] = useState<string>("Just now");
+
+  const fetchData = useCallback(async (isForce: boolean = false) => {
     try {
-      setLoading(true);
+      if (!isForce) setLoading(true);
       const [ipoData, metricsData, listedData] = await Promise.all([
-        getIPOs(),
-        getIPOOverviewMetrics(),
-        getListedIPOPerformance()
+        getIPOs(undefined, undefined, isForce),
+        getIPOOverviewMetrics(isForce),
+        getListedIPOPerformance(isForce)
       ]);
       setIpos(ipoData);
       setMetrics(metricsData);
       setListedIpos(listedData);
+      setLastSyncedAt(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
     } catch (err: unknown) {
       toast.error("Failed to load IPO data", (err as Error).message || "Please check backend connection.");
     } finally {
@@ -78,7 +81,7 @@ export default function IPOPage() {
 
   const handleRefresh = () => {
     setRefreshing(true);
-    fetchData();
+    fetchData(true);
   };
 
   const filteredIPOs = useMemo(() => {
@@ -156,13 +159,21 @@ export default function IPOPage() {
             </div>
 
             <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold text-emerald-400">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>LIVE FEED</span>
+              </div>
+              <div className="hidden sm:flex flex-col text-right pr-1">
+                <span className="text-[10px] text-slate-500 font-mono">Last Synced</span>
+                <span className="text-[11px] text-slate-300 font-mono font-bold">{lastSyncedAt}</span>
+              </div>
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:bg-white/[0.08] shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400 hover:bg-blue-600/30 shadow-sm transition-all active:scale-95 disabled:opacity-50"
               >
                 <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-                Refresh Quotes
+                Force Refresh
               </button>
             </div>
           </div>

@@ -428,6 +428,7 @@ export default function IntelligencePage() {
                 <span>History</span>
               </button>
 
+
               <button
                 onClick={() => loadIntelligence(selectedPortfolioId)}
                 disabled={loading}

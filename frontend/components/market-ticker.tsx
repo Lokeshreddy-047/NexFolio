@@ -157,7 +157,7 @@ export function MarketTicker() {
       </div>
 
       {/* Marquee Track */}
-      <div className="overflow-hidden flex-1 relative flex">
+      <div className="overflow-hidden flex-1 relative flex min-w-0">
         <div className="animate-ticker flex items-center gap-6 text-xs whitespace-nowrap pl-4">
           {tickerStream.map((item, idx) => (
             <button

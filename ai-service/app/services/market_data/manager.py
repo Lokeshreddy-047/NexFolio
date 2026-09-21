@@ -39,10 +39,15 @@ class MarketDataManager:
         mode_env = os.getenv("MARKET_DATA_MODE")
         provider_env = os.getenv("MARKET_DATA_PROVIDER")
 
+        has_upstox_creds = bool(
+            os.getenv("UPSTOX_ACCESS_TOKEN") or 
+            (os.getenv("UPSTOX_CLIENT_ID") or os.getenv("UPSTOX_API_KEY"))
+        )
+
         # Normalize and validate configuration pairs
         if mode_env is None and provider_env is None:
             mode = "live"
-            provider = "yahoo"
+            provider = "upstox" if has_upstox_creds else "yahoo"
         elif mode_env is None and provider_env is not None:
             provider = provider_env.lower().strip()
             if provider in ("simulated", "simulated_live"):
@@ -53,18 +58,21 @@ class MarketDataManager:
                 provider = "yahoo"
             elif provider in ("upstox", "angel_one", "zerodha", "live", "live_vendor", "nse_authorized_feed"):
                 mode = "live"
-                provider = "yahoo" if provider in ("live", "live_vendor") else provider
+                if provider in ("live", "live_vendor"):
+                    provider = "upstox" if has_upstox_creds else "yahoo"
             else:
                 mode = "reference"
                 provider = "reference"
         elif mode_env is not None and provider_env is None:
             mode = mode_env.lower().strip()
-            provider = "yahoo" if mode == "live" else mode
+            provider = ("upstox" if has_upstox_creds else "yahoo") if mode == "live" else mode
         else:
             mode = mode_env.lower().strip()
             provider = provider_env.lower().strip()
             if provider in ("yfinance", "public"):
                 provider = "yahoo"
+            elif provider in ("live", "live_vendor"):
+                provider = "upstox" if has_upstox_creds else "yahoo"
 
         if (mode, provider) not in VALID_CONFIG_PAIRS:
             raise ValueError(

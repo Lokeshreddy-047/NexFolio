@@ -1,0 +1,31 @@
+# ==============================================================================
+# Git Attributes - Cross-Platform Normalization
+# ==============================================================================
+
+# Auto-detect text files and normalize line endings to LF on checkout/commit
+* text=auto eol=lf
+
+# Windows scripts & command files
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Shell scripts
+*.sh text eol=lf
+
+# Explicit binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text eol=lf
+*.pdf binary
+*.pkl binary
+*.parquet binary
+*.tar.gz binary
+*.zip binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary

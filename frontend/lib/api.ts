@@ -18,6 +18,11 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       }
+    } else if (typeof window !== "undefined") {
+      const devToken = localStorage.getItem("nexfolio_dev_token") || "mock_token_demo_institutional_user";
+      if (devToken) {
+        headers["Authorization"] = `Bearer ${devToken}`;
+      }
     }
   } catch (error) {
     console.warn("Could not retrieve Firebase auth token:", error);
@@ -1297,10 +1302,15 @@ export interface IPOOverviewMetrics {
   top_gmp_pct: number;
 }
 
-export async function getIPOs(status?: IPOStatus, marketType?: IPOMarketType): Promise<IPOItem[]> {
+export async function getIPOs(
+  status?: IPOStatus,
+  marketType?: IPOMarketType,
+  forceRefresh: boolean = false
+): Promise<IPOItem[]> {
   const params = new URLSearchParams();
   if (status) params.append("status", status);
   if (marketType) params.append("market_type", marketType);
+  if (forceRefresh) params.append("force_refresh", "true");
   const qs = params.toString() ? `?${params.toString()}` : "";
   return apiRequest<IPOItem[]>(`/api/v1/ipo${qs}`);
 }
@@ -1309,12 +1319,14 @@ export async function getIPODetail(ipoId: string): Promise<IPOItem> {
   return apiRequest<IPOItem>(`/api/v1/ipo/${encodeURIComponent(ipoId)}`);
 }
 
-export async function getIPOOverviewMetrics(): Promise<IPOOverviewMetrics> {
-  return apiRequest<IPOOverviewMetrics>(`/api/v1/ipo/metrics/overview`);
+export async function getIPOOverviewMetrics(forceRefresh: boolean = false): Promise<IPOOverviewMetrics> {
+  const query = forceRefresh ? "?force_refresh=true" : "";
+  return apiRequest<IPOOverviewMetrics>(`/api/v1/ipo/metrics/overview${query}`);
 }
 
-export async function getListedIPOPerformance(): Promise<ListedIPOPosPerformance[]> {
-  return apiRequest<ListedIPOPosPerformance[]>(`/api/v1/ipo/performance/listed`);
+export async function getListedIPOPerformance(forceRefresh: boolean = false): Promise<ListedIPOPosPerformance[]> {
+  const query = forceRefresh ? "?force_refresh=true" : "";
+  return apiRequest<ListedIPOPosPerformance[]>(`/api/v1/ipo/performance/listed${query}`);
 }
 
 // -------------------------------------------------------------
@@ -1390,13 +1402,15 @@ export async function getMarketNews(
   category?: NewsCategory,
   sentiment?: NewsSentiment,
   sector?: string,
-  search?: string
+  search?: string,
+  refresh?: boolean
 ): Promise<NewsItem[]> {
   const params = new URLSearchParams();
   if (category) params.append("category", category);
   if (sentiment) params.append("sentiment", sentiment);
   if (sector && sector !== "ALL") params.append("sector", sector);
   if (search) params.append("search", search);
+  if (refresh) params.append("refresh", "true");
   const qs = params.toString() ? `?${params.toString()}` : "";
   return apiRequest<NewsItem[]>(`/api/v1/news${qs}`);
 }
@@ -1405,8 +1419,9 @@ export async function getNewsOverview(): Promise<NewsOverviewResponse> {
   return apiRequest<NewsOverviewResponse>(`/api/v1/news/overview`);
 }
 
-export async function getMacroIndicators(): Promise<MacroIndicator[]> {
-  return apiRequest<MacroIndicator[]>(`/api/v1/news/macro`);
+export async function getMacroIndicators(forceRefresh: boolean = false): Promise<MacroIndicator[]> {
+  const query = forceRefresh ? "?force_refresh=true" : "";
+  return apiRequest<MacroIndicator[]>(`/api/v1/news/macro${query}`);
 }
 
 export async function getStockNews(symbol: string): Promise<NewsItem[]> {
@@ -1416,3 +1431,112 @@ export async function getStockNews(symbol: string): Promise<NewsItem[]> {
 export async function getPortfolioNews(portfolioId: string): Promise<PortfolioNewsImpact> {
   return apiRequest<PortfolioNewsImpact>(`/api/v1/news/portfolio/${portfolioId}`);
 }
+
+// ----------------------------------------------------------------------------
+// Monte Carlo Simulation & Crisis Stress Testing
+// ----------------------------------------------------------------------------
+
+export interface TrajectoryPoint {
+  day: number;
+  p5: number;
+  p25: number;
+  p50: number;
+  p75: number;
+  p95: number;
+}
+
+export interface VaRMetrics {
+  var_95_pct: number;
+  var_95_amount: number;
+  var_99_pct: number;
+  var_99_amount: number;
+  cvar_95_pct: number;
+  cvar_95_amount: number;
+  cvar_99_pct: number;
+  cvar_99_amount: number;
+  daily_var_95_pct: number;
+  daily_var_95_amount: number;
+  prob_loss_pct: number;
+  prob_drawdown_10_pct: number;
+  prob_drawdown_20_pct: number;
+  prob_drawdown_30_pct: number;
+}
+
+export interface MonteCarloResponse {
+  portfolio_id: string;
+  portfolio_name: string;
+  initial_value: number;
+  iterations: number;
+  horizon_days: number;
+  trajectories: TrajectoryPoint[];
+  var_metrics: VaRMetrics;
+  expected_final_value: number;
+  median_final_value: number;
+  worst_case_5pct_value: number;
+  best_case_95pct_value: number;
+  annualized_return: number;
+  annualized_volatility: number;
+  summary_verdict: string;
+}
+
+export interface SectorDamageItem {
+  sector: string;
+  weight_pct: number;
+  shock_pct: number;
+  contribution_to_loss_pct: number;
+}
+
+export interface CrisisScenarioInfo {
+  id: string;
+  name: string;
+  era: string;
+  duration_days: number;
+  benchmark_shock_pct: number;
+  recovery_months: number;
+  narrative: string;
+  vulnerable_sectors: string[];
+  defensive_sectors: string[];
+}
+
+export interface CrisisStressResponse {
+  scenario_id: string;
+  scenario_name: string;
+  portfolio_initial_value: number;
+  projected_portfolio_loss_pct: number;
+  projected_portfolio_loss_amount: number;
+  projected_final_value: number;
+  benchmark_loss_pct: number;
+  relative_alpha_pct: number;
+  stress_verdict: "RESILIENT" | "MODERATE_VULNERABILITY" | "HIGH_VULNERABILITY" | "CRITICAL_RISK" | string;
+  worst_hit_holding?: string | null;
+  worst_hit_holding_loss_pct?: number | null;
+  safest_holding?: string | null;
+  safest_holding_resilience?: string | null;
+  estimated_recovery_months: number;
+  sector_damage_breakdown: SectorDamageItem[];
+  hedging_recommendations: string[];
+}
+
+export async function getMonteCarloSimulation(
+  portfolioId: string,
+  payload: { iterations?: number; horizon_days?: number; confidence_levels?: number[] } = {}
+): Promise<MonteCarloResponse> {
+  return apiRequest<MonteCarloResponse>(`/api/v1/portfolios/${portfolioId}/monte-carlo`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function getCrisisStressTest(
+  portfolioId: string,
+  payload: { scenario_id?: string; custom_market_shock_pct?: number; custom_volatility_multiplier?: number } = {}
+): Promise<CrisisStressResponse> {
+  return apiRequest<CrisisStressResponse>(`/api/v1/portfolios/${portfolioId}/crisis-simulation`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function getCrisisScenarios(): Promise<CrisisScenarioInfo[]> {
+  return apiRequest<CrisisScenarioInfo[]>(`/api/v1/stress-test/scenarios`);
+}

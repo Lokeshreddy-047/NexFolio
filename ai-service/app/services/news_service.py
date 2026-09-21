@@ -10,6 +10,7 @@ from app.schemas.news import (
     PortfolioNewsImpact,
     NewsOverviewResponse
 )
+from app.services.live_news_ingestion import live_news_aggregator, live_macro_aggregator
 
 
 class NewsService:
@@ -277,16 +278,34 @@ class NewsService:
             ai_takeaway=raw["ai_takeaway"]
         )
 
+    async def _get_combined_articles(self, force_refresh: bool = False) -> List[NewsItem]:
+        ref_items = [self._to_news_item(r) for r in self._articles_database]
+        try:
+            live_items = await live_news_aggregator.fetch_live_news(force_refresh=force_refresh)
+        except Exception:
+            live_items = []
+
+        if not live_items:
+            return ref_items
+
+        existing_headlines = {i.headline.strip().lower() for i in live_items}
+        combined = list(live_items)
+        for r in ref_items:
+            if r.headline.strip().lower() not in existing_headlines:
+                combined.append(r)
+        return combined
+
     async def get_all_news(
         self,
         category: Optional[NewsCategory] = None,
         sentiment: Optional[NewsSentiment] = None,
         sector: Optional[str] = None,
-        search: Optional[str] = None
+        search: Optional[str] = None,
+        force_refresh: bool = False
     ) -> List[NewsItem]:
+        all_articles = await self._get_combined_articles(force_refresh=force_refresh)
         results = []
-        for raw in self._articles_database:
-            item = self._to_news_item(raw)
+        for item in all_articles:
             if category and item.category != category:
                 continue
             if sentiment and item.sentiment != sentiment:
@@ -297,17 +316,23 @@ class NewsService:
                 query = search.strip().lower()
                 headline_match = query in item.headline.lower()
                 summary_match = query in item.summary.lower()
-                stock_match = any(query in s.symbol.lower() or query in s.company_name.lower() for s in item.related_stocks)
+                stock_match = any(query in s.symbol.lower() or query in s.company_name.lower() or query in s.base_symbol.lower() for s in item.related_stocks)
                 if not (headline_match or summary_match or stock_match):
                     continue
             results.append(item)
         return results
 
-    async def get_macro_indicators(self) -> List[MacroIndicator]:
+    async def get_macro_indicators(self, force_refresh: bool = False) -> List[MacroIndicator]:
+        try:
+            live_macro = await live_macro_aggregator.fetch_macro_indicators(force_refresh=force_refresh)
+            if live_macro and len(live_macro) > 0:
+                return live_macro
+        except Exception:
+            pass
         return [MacroIndicator(**item) for item in self._macro_indicators]
 
     async def get_news_overview(self) -> NewsOverviewResponse:
-        all_news = [self._to_news_item(r) for r in self._articles_database]
+        all_news = await self._get_combined_articles()
         breaking = [n for n in all_news if n.is_breaking]
         macro = await self.get_macro_indicators()
 
@@ -317,8 +342,8 @@ class NewsService:
 
         return NewsOverviewResponse(
             macro_indicators=macro,
-            breaking_news=breaking,
-            top_headlines=all_news[:6],
+            breaking_news=breaking[:5],
+            top_headlines=all_news[:8],
             total_articles_count=len(all_news),
             sentiment_ratio={
                 "bullish_pct": round((bullish_cnt / len(all_news)) * 100, 1) if all_news else 0,
@@ -329,9 +354,9 @@ class NewsService:
 
     async def get_stock_news(self, symbol: str) -> List[NewsItem]:
         clean_sym = symbol.strip().upper().replace(".NS", "")
+        all_articles = await self._get_combined_articles()
         results = []
-        for raw in self._articles_database:
-            item = self._to_news_item(raw)
+        for item in all_articles:
             if any(s.base_symbol.upper() == clean_sym or s.symbol.upper() == f"{clean_sym}.NS" for s in item.related_stocks):
                 results.append(item)
         return results
@@ -343,10 +368,10 @@ class NewsService:
         holding_symbols: List[str]
     ) -> PortfolioNewsImpact:
         normalized_holdings = {s.strip().upper().replace(".NS", "") for s in holding_symbols}
+        all_articles = await self._get_combined_articles()
         matched_articles = []
 
-        for raw in self._articles_database:
-            item = self._to_news_item(raw)
+        for item in all_articles:
             if any(s.base_symbol.upper() in normalized_holdings for s in item.related_stocks):
                 matched_articles.append(item)
 

@@ -188,17 +188,40 @@ class UpstoxBrokerAdapter(BaseBrokerAdapter):
 
         return results
 
+    def _get_yahoo_fallback(self):
+        if not hasattr(self, "_yahoo_fallback") or self._yahoo_fallback is None:
+            from app.services.market_data.adapters.yahoo_adapter import YahooFinanceAdapter
+            self._yahoo_fallback = YahooFinanceAdapter()
+        return self._yahoo_fallback
+
     async def fetch_snapshot(self, symbols: List[str]) -> Dict[str, Dict[str, Any]]:
-        """Returns the latest quotes for symbols, fetching from Upstox REST if missing from cache."""
+        """Returns the latest quotes for symbols, fetching from Upstox REST if missing from cache, with live Yahoo fallback."""
         missing = [s for s in symbols if SymbolNormalizer.to_canonical(s) not in self._quotes_cache]
         if missing and self.has_credentials and self._access_token:
-            await self.fetch_rest_quotes(missing)
+            try:
+                await self.fetch_rest_quotes(missing)
+            except Exception as exc:
+                logger.warning(f"Upstox REST quote fetch error: {exc}")
 
         result = {}
+        still_missing = []
         for sym in symbols:
             can = SymbolNormalizer.to_canonical(sym)
             if can in self._quotes_cache:
                 result[can] = self._quotes_cache[can]
+            else:
+                still_missing.append(can)
+
+        # Fallback to live Yahoo Finance for any symbols Upstox couldn't resolve or when access token expires
+        if still_missing:
+            try:
+                yahoo_quotes = await self._get_yahoo_fallback().fetch_snapshot(still_missing)
+                for s_sym, q in yahoo_quotes.items():
+                    result[s_sym] = q
+                    self._quotes_cache[s_sym] = q
+            except Exception as exc:
+                logger.warning(f"Yahoo fallback fetch error in UpstoxBrokerAdapter: {exc}")
+
         return result
 
     def ingest_upstox_tick(

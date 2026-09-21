@@ -12,6 +12,7 @@ from app.schemas.ipo import (
     ListedIPOPosPerformance,
     IPOOverviewMetrics
 )
+from app.services.live_ipo_ingestion import live_ipo_aggregator
 
 
 class IPOService:
@@ -471,11 +472,12 @@ class IPOService:
         self,
         status: Optional[IPOStatus] = None,
         market_type: Optional[IPOMarketType] = None,
-        verdict: Optional[IPORiskVerdict] = None
+        verdict: Optional[IPORiskVerdict] = None,
+        force_refresh: bool = False
     ) -> List[IPOItem]:
+        all_items = await live_ipo_aggregator.get_live_ipos(force_refresh=force_refresh)
         results = []
-        for raw in self._ipos_database:
-            item = self._to_ipo_item(raw)
+        for item in all_items:
             if status and item.status != status:
                 continue
             if market_type and item.market_type != market_type:
@@ -486,36 +488,17 @@ class IPOService:
         return results
 
     async def get_ipo_by_id(self, ipo_id: str) -> Optional[IPOItem]:
-        for raw in self._ipos_database:
-            if raw["id"] == ipo_id or raw["symbol"].lower() == ipo_id.lower():
-                return self._to_ipo_item(raw)
+        all_items = await live_ipo_aggregator.get_live_ipos()
+        for item in all_items:
+            if item.id == ipo_id or item.symbol.lower() == ipo_id.lower():
+                return item
         return None
 
-    async def get_overview_metrics(self) -> IPOOverviewMetrics:
-        all_items = [self._to_ipo_item(r) for r in self._ipos_database]
-        active_count = sum(1 for i in all_items if i.status == IPOStatus.OPEN)
-        upcoming_count = sum(1 for i in all_items if i.status == IPOStatus.UPCOMING)
-        total_raised = sum(i.total_issue_size_cr for i in all_items)
-        
-        # Calculate average listing gain from listed cohort
-        avg_gain = sum(l["listing_gain_pct"] for l in self._listed_performance) / len(self._listed_performance) if self._listed_performance else 0.0
+    async def get_overview_metrics(self, force_refresh: bool = False) -> IPOOverviewMetrics:
+        return await live_ipo_aggregator.get_live_overview_metrics(force_refresh=force_refresh)
 
-        # Top GMP item
-        sorted_gmp = sorted(all_items, key=lambda x: x.gmp_pct, reverse=True)
-        top_pick = sorted_gmp[0].company_name if sorted_gmp else "N/A"
-        top_gmp = sorted_gmp[0].gmp_pct if sorted_gmp else 0.0
-
-        return IPOOverviewMetrics(
-            active_bidding_count=active_count,
-            upcoming_count=upcoming_count,
-            total_capital_raised_cr=round(total_raised, 1),
-            average_listing_gain_pct=round(avg_gain, 2),
-            top_gmp_pick=top_pick,
-            top_gmp_pct=round(top_gmp, 2)
-        )
-
-    async def get_listed_performance(self) -> List[ListedIPOPosPerformance]:
-        return [ListedIPOPosPerformance(**item) for item in self._listed_performance]
+    async def get_listed_performance(self, force_refresh: bool = False) -> List[ListedIPOPosPerformance]:
+        return await live_ipo_aggregator.get_live_listed_performance(force_refresh=force_refresh)
 
 
 # Global singleton instance

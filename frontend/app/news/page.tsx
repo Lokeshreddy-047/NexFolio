@@ -41,6 +41,8 @@ export default function MarketNewsPage() {
   const [activePortfolioId, setActivePortfolioId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isLiveStreaming, setIsLiveStreaming] = useState(true);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string>("Just now");
 
   // Filter states
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
@@ -48,44 +50,56 @@ export default function MarketNewsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [portfolioOnly, setPortfolioOnly] = useState(false);
 
-  const fetchNewsData = useCallback(async () => {
+  const fetchNewsData = useCallback(async (isBackground: boolean = false) => {
     try {
-      setLoading(true);
+      if (!isBackground) setLoading(true);
       const [allNews, macros, userPorts] = await Promise.all([
-        getMarketNews(),
-        getMacroIndicators(),
+        getMarketNews(undefined, undefined, undefined, undefined, isBackground),
+        getMacroIndicators(isBackground),
         getPortfolios().catch(() => [])
       ]);
 
       setArticles(allNews);
       setMacroIndicators(macros);
       setPortfolios(userPorts);
+      setLastSyncedAt(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
 
       if (userPorts.length > 0) {
-        const defaultPortId = userPorts[0].id;
-        setActivePortfolioId(defaultPortId);
+        const portId = activePortfolioId || userPorts[0].id;
+        if (!activePortfolioId) setActivePortfolioId(portId);
         try {
-          const impact = await getPortfolioNews(defaultPortId);
+          const impact = await getPortfolioNews(portId);
           setPortfolioImpact(impact);
         } catch {
           // ignore if portfolio news empty
         }
       }
     } catch (err: unknown) {
-      toast.error("Failed to load market news", (err as Error).message || "Please check backend connection.");
+      if (!isBackground) {
+        toast.error("Failed to load market news", (err as Error).message || "Please check backend connection.");
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [toast]);
+  }, [activePortfolioId, toast]);
 
   useEffect(() => {
     fetchNewsData();
   }, [fetchNewsData]);
 
+  // Real-Time Background Stream Auto-Sync (every 25s when streaming is active)
+  useEffect(() => {
+    if (!isLiveStreaming) return;
+    const interval = setInterval(() => {
+      fetchNewsData(true);
+    }, 25000);
+    return () => clearInterval(interval);
+  }, [isLiveStreaming, fetchNewsData]);
+
   const handleRefresh = () => {
     setRefreshing(true);
-    fetchNewsData();
+    fetchNewsData(true);
   };
 
   const handlePortfolioChange = async (portId: string) => {
@@ -98,11 +112,17 @@ export default function MarketNewsPage() {
     }
   };
 
+  const breakingArticles = useMemo(() => articles.filter((a) => a.is_breaking), [articles]);
+
+  const portfolioArticleIds = useMemo(() => {
+    if (!portfolioImpact) return new Set<string>();
+    return new Set(portfolioImpact.articles.map((a) => a.id));
+  }, [portfolioImpact]);
+
   const filteredArticles = useMemo(() => {
     let list = articles;
 
     if (portfolioOnly && portfolioImpact) {
-      const portfolioArticleIds = new Set(portfolioImpact.articles.map((a) => a.id));
       list = list.filter((item) => portfolioArticleIds.has(item.id));
     }
 
@@ -124,27 +144,27 @@ export default function MarketNewsPage() {
       }
       return true;
     });
-  }, [articles, portfolioOnly, portfolioImpact, selectedCategory, selectedSentiment, searchQuery]);
+  }, [articles, portfolioOnly, portfolioImpact, portfolioArticleIds, selectedCategory, selectedSentiment, searchQuery]);
 
   const getSentimentBadge = (sentiment: NewsSentiment) => {
     switch (sentiment) {
       case "BULLISH":
         return {
           label: "Bullish ▲",
-          badgeClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
-          icon: <TrendingUp size={12} className="text-emerald-500" />
+          badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+          icon: <TrendingUp size={12} className="text-emerald-400" />
         };
       case "BEARISH":
         return {
           label: "Bearish ▼",
-          badgeClass: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30",
-          icon: <TrendingDown size={12} className="text-rose-500" />
+          badgeClass: "bg-rose-500/10 text-rose-400 border-rose-500/30",
+          icon: <TrendingDown size={12} className="text-rose-400" />
         };
       case "NEUTRAL":
         return {
           label: "Neutral •",
-          badgeClass: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30",
-          icon: <Zap size={12} className="text-slate-500" />
+          badgeClass: "bg-slate-500/10 text-slate-300 border-slate-500/30",
+          icon: <Zap size={12} className="text-slate-400" />
         };
     }
   };
@@ -177,11 +197,11 @@ export default function MarketNewsPage() {
           onPortfolioChange={(id) => handlePortfolioChange(id)}
         />
 
-        <main className="flex-1 p-4 lg:p-8 space-y-6 max-w-[1600px] w-full mx-auto">
-          <MotionContainer className="space-y-6">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1600px] w-full min-w-0 mx-auto">
+          <MotionContainer className="space-y-6 min-w-0">
           {/* Header Sub-Section */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
-            <div>
+          <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-4 border-b border-white/[0.08] pb-6 min-w-0">
+            <div className="max-w-2xl min-w-0">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
                 <Newspaper size={13} />
                 Institutional Intelligence Wire
@@ -194,51 +214,86 @@ export default function MarketNewsPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+              <button
+                onClick={() => setIsLiveStreaming(!isLiveStreaming)}
+                className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl border transition-all ${
+                  isLiveStreaming
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-sm shadow-emerald-500/20"
+                    : "bg-white/[0.04] border-white/[0.08] text-slate-400 hover:text-slate-200"
+                }`}
+                title={isLiveStreaming ? "Streaming active (auto-polling every 25s)" : "Stream paused. Click to resume"}
+              >
+                <span className={`w-2 h-2 rounded-full ${isLiveStreaming ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`} />
+                {isLiveStreaming ? "STREAMING LIVE" : "STREAM PAUSED"}
+              </button>
+              <div className="flex flex-col text-left sm:text-right pr-1">
+                <span className="text-[10px] text-slate-500 font-mono">Last Synced</span>
+                <span className="text-[11px] text-slate-300 font-mono font-bold">{lastSyncedAt}</span>
+              </div>
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:bg-white/[0.08] shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400 hover:bg-blue-600/30 shadow-sm transition-all active:scale-95 disabled:opacity-50"
               >
                 <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-                Refresh Feed
+                Force Refresh
               </button>
             </div>
           </div>
 
+          {/* Real-time Breaking Wire Alert Ribbon */}
+          {breakingArticles.length > 0 && (
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-transparent border border-amber-500/30 flex items-center gap-3 overflow-hidden shadow-lg backdrop-blur-md w-full min-w-0">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-black uppercase tracking-wider shrink-0 animate-pulse shadow-[0_0_12px_rgba(244,63,94,0.3)]">
+                <Zap size={13} className="fill-rose-400" />
+                Breaking Wire
+              </div>
+              <div className="flex items-center gap-6 overflow-x-auto text-xs text-slate-200 whitespace-nowrap scrollbar-none font-medium py-0.5 flex-1 min-w-0">
+                {breakingArticles.map((b) => (
+                  <span key={b.id} className="inline-flex items-center gap-2 shrink-0">
+                    <span className="text-amber-400 font-bold">[{b.source}]</span>
+                    <span className="text-white">{b.headline}</span>
+                    <span className="text-slate-400 text-[11px] font-mono">({b.time_ago})</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
       {/* Top Macroeconomic Intermarket Radar Ribbon */}
       {macroIndicators.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-2 min-w-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
               <Globe size={13} />
               <span>Macroeconomic & Sovereign Levers</span>
             </div>
             <span className="text-[11px] font-mono text-slate-400">Synchronized via Live Feeds</span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-6 gap-3 min-w-0">
             {macroIndicators.map((macro) => (
               <div
                 key={macro.id}
-                className="p-3 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 shadow-sm backdrop-blur-md"
+                className="p-3.5 rounded-2xl bg-[#0a101f]/90 border border-white/[0.08] hover:border-white/[0.16] shadow-lg backdrop-blur-xl transition-all"
               >
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">
+                <div className="text-[11px] font-semibold text-slate-400 truncate">
                   {macro.name}
                 </div>
-                <div className="text-base font-black text-slate-900 dark:text-white font-mono mt-1">
+                <div className="text-base font-black text-white font-mono mt-1 tracking-tight">
                   {macro.current_value}
                 </div>
-                <div className="flex items-center justify-between text-[10px] mt-1 font-mono">
-                  <span className={macro.day_change_pct >= 0 ? "text-emerald-500" : "text-rose-500"}>
+                <div className="flex items-center justify-between text-[10px] mt-1.5 font-mono">
+                  <span className={macro.day_change_pct >= 0 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
                     {macro.day_change_pct >= 0 ? "+" : ""}{macro.day_change_pct}%
                   </span>
-                  <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${
                     macro.trend === "BULLISH"
-                      ? "bg-emerald-500/10 text-emerald-500"
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                       : macro.trend === "BEARISH"
-                      ? "bg-rose-500/10 text-rose-500"
-                      : "bg-slate-500/10 text-slate-500"
+                      ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                      : "bg-slate-500/10 text-slate-400 border-slate-500/20"
                   }`}>
                     {macro.trend}
                   </span>
@@ -251,38 +306,38 @@ export default function MarketNewsPage() {
 
       {/* Portfolio Impact Spotlight Banner */}
       {portfolioImpact && portfolioImpact.total_relevant_news_count > 0 && (
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-emerald-500/5 to-transparent border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg backdrop-blur-md w-full min-w-0">
+          <div className="flex items-start gap-3.5 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(16,231,157,0.2)]">
               <Briefcase size={20} />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-bold text-sm text-white truncate">
                   Portfolio News Radar: {portfolioImpact.portfolio_name}
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
                   {portfolioImpact.total_relevant_news_count} Relevant Articles
                 </span>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-400 mt-0.5">
                 Overall Sentiment on your holdings:{" "}
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="font-bold text-emerald-400">
                   {portfolioImpact.overall_portfolio_sentiment} (+{(portfolioImpact.sentiment_score * 100).toFixed(0)}% Score)
                 </span>
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
             {portfolios.length > 1 && (
               <select
                 value={activePortfolioId}
                 onChange={(e) => handlePortfolioChange(e.target.value)}
-                className="px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl font-medium"
+                className="px-3 py-1.5 text-xs bg-[#070c18] text-white border border-white/[0.12] rounded-xl font-medium focus:outline-none focus:border-emerald-500"
               >
                 {portfolios.map((p) => (
-                  <option key={p.id} value={p.id}>
+                  <option key={p.id} value={p.id} className="bg-slate-900 text-white">
                     {p.name}
                   </option>
                 ))}
@@ -291,10 +346,10 @@ export default function MarketNewsPage() {
 
             <button
               onClick={() => setPortfolioOnly(!portfolioOnly)}
-              className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap ${
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap border shrink-0 ${
                 portfolioOnly
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                  : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300"
+                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-md shadow-emerald-500/10"
+                  : "bg-[#070c18] border-white/[0.08] text-slate-300 hover:border-white/[0.2] hover:text-white"
               }`}
             >
               {portfolioOnly ? "Showing Holdings Only ✓" : "Filter by My Holdings"}
@@ -304,26 +359,26 @@ export default function MarketNewsPage() {
       )}
 
       {/* Filter Toolbar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900/40 p-3 rounded-2xl border border-slate-200 dark:border-slate-800/60 shadow-sm">
-        {/* Category Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
+      <div className="flex flex-col gap-3.5 bg-[#0a101f]/90 p-3.5 sm:p-4 rounded-2xl border border-white/[0.08] shadow-lg backdrop-blur-md w-full min-w-0">
+        {/* Category Navigation Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none w-full flex-wrap sm:flex-nowrap">
           {(
             [
               { id: "ALL", label: "All News" },
               { id: "EARNINGS", label: "Earnings" },
               { id: "DEALS_MA", label: "Deals & Capex" },
               { id: "SECTOR_TRENDS", label: "Sector Trends" },
-              { id: "REGULATORY", label: "Regulatory" },
+              { id: "REGULATORY", label: "Regulatory & SEBI" },
               { id: "MACRO_POLICY", label: "Macro Policy" }
             ] as const
           ).map((cat) => (
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all whitespace-nowrap ${
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap border shrink-0 ${
                 selectedCategory === cat.id
-                  ? "bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  ? "bg-blue-600/25 text-blue-400 border-blue-500/40 shadow-sm shadow-blue-500/10"
+                  : "border-white/[0.06] text-slate-400 hover:text-slate-200 bg-white/[0.02] hover:bg-white/[0.05]"
               }`}
             >
               {cat.label}
@@ -331,32 +386,38 @@ export default function MarketNewsPage() {
           ))}
         </div>
 
-        {/* Sentiment Filter & Search */}
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold">
-            {(["ALL", "BULLISH", "BEARISH", "NEUTRAL"] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setSelectedSentiment(s)}
-                className={`px-2.5 py-1 rounded-lg transition-all ${
-                  selectedSentiment === s
-                    ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm"
-                    : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-                }`}
-              >
-                {s}
-              </button>
-            ))}
+        {/* Sentiment Filter & Search Toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-white/[0.06] w-full min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] font-semibold text-slate-400 mr-1 hidden sm:inline">Sentiment:</span>
+            <div className="flex items-center p-1 rounded-xl bg-black/40 border border-white/[0.08] text-xs font-semibold">
+              {(["ALL", "BULLISH", "BEARISH", "NEUTRAL"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSelectedSentiment(s)}
+                  className={`px-3 py-1 rounded-lg transition-all text-xs font-bold ${
+                    selectedSentiment === s
+                      ? "bg-white/[0.12] text-white shadow-sm border border-white/[0.12]"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            <span className="text-[11px] font-mono text-slate-400 ml-2">
+              {filteredArticles.length} {filteredArticles.length === 1 ? "story" : "stories"}
+            </span>
           </div>
 
-          <div className="relative flex-1 sm:w-60">
+          <div className="relative w-full sm:w-72">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Search ticker, company, news..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="w-full pl-9 pr-3 py-1.5 text-xs bg-[#070c18] text-white placeholder:text-slate-500 border border-white/[0.08] rounded-xl focus:outline-none focus:border-blue-500/50 transition-colors"
             />
           </div>
         </div>
@@ -366,92 +427,116 @@ export default function MarketNewsPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 space-y-4">
           <RefreshCw size={28} className="animate-spin text-blue-500" />
-          <p className="text-xs text-slate-500 font-medium">Synthesizing real-time market news and sentiment tags...</p>
+          <p className="text-xs text-slate-400 font-medium">Synthesizing real-time market news and sentiment tags...</p>
         </div>
       ) : filteredArticles.length === 0 ? (
-        <div className="p-12 text-center rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800">
-          <AlertTriangle size={32} className="mx-auto text-amber-500 mb-3" />
-          <h3 className="text-sm font-bold">No articles match your criteria</h3>
-          <p className="text-xs text-slate-500 mt-1">Try clearing filters or search query to see full market wire.</p>
+        <div className="p-12 text-center rounded-2xl bg-[#0a101f]/80 border border-white/[0.08]">
+          <AlertTriangle size={32} className="mx-auto text-amber-400 mb-3" />
+          <h3 className="text-sm font-bold text-white">No articles match your criteria</h3>
+          <p className="text-xs text-slate-400 mt-1">Try clearing filters or search query to see full market wire.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 min-w-0">
           {filteredArticles.map((item) => {
             const sentiment = getSentimentBadge(item.sentiment);
             return (
               <div
                 key={item.id}
-                className="flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 p-5 shadow-sm hover:shadow-lg hover:border-blue-500/40 dark:hover:border-blue-500/40 transition-all backdrop-blur-md group"
+                className="flex flex-col justify-between rounded-2xl bg-[#0a101f]/90 border border-white/[0.08] p-5 shadow-xl hover:border-blue-500/40 hover:shadow-2xl hover:shadow-blue-500/5 transition-all backdrop-blur-xl group min-w-0"
               >
-                <div className="space-y-3.5">
+                <div className="space-y-3.5 min-w-0">
                   {/* Card Meta Top Header */}
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center justify-between text-xs gap-2 flex-wrap min-w-0">
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-semibold text-slate-300">
                         {item.source}
                       </span>
-                      <span className="text-slate-300 dark:text-slate-700">•</span>
+                      <span className="text-slate-600">•</span>
                       <span className="text-slate-400 font-mono text-[11px]">{item.time_ago}</span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                      {portfolioArticleIds.has(item.id) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                          ★ Holding
+                        </span>
+                      )}
+                      {item.is_breaking && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse">
+                          ● BREAKING
+                        </span>
+                      )}
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${sentiment.badgeClass}`}>
                         {sentiment.icon}
                         {sentiment.label}
                       </span>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white/[0.06] text-slate-300 border border-white/[0.06]">
                         {getCategoryLabel(item.category)}
                       </span>
                     </div>
                   </div>
 
                   {/* Headline */}
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug group-hover:text-blue-500 transition-colors">
+                  <h3 className="text-base font-bold text-white leading-snug group-hover:text-blue-400 transition-colors break-words">
                     {item.headline}
                   </h3>
 
                   {/* Summary */}
-                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  <p className="text-xs text-slate-300 leading-relaxed font-normal break-words">
                     {item.summary}
                   </p>
 
                   {/* AI Actionable Takeaway Callout */}
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-100 dark:border-slate-800/80 space-y-1">
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                  <div className="p-3.5 rounded-xl bg-black/40 border border-white/[0.06] space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-400">
                       <Sparkles size={12} />
                       <span>AI Market Takeaway</span>
                     </div>
-                    <p className="text-[11px] text-slate-700 dark:text-slate-300 font-medium leading-relaxed">
+                    <p className="text-[11px] text-slate-300 font-medium leading-relaxed">
                       {item.ai_takeaway}
                     </p>
                   </div>
                 </div>
 
-                {/* Related Stocks Footer */}
-                {item.related_stocks.length > 0 && (
-                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[11px] text-slate-400 font-medium">Impacted Tickers:</span>
-                      {item.related_stocks.map((stk) => (
-                        <Link
-                          key={stk.symbol}
-                          href={`/markets/${encodeURIComponent(stk.symbol)}`}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold transition-colors"
-                        >
-                          <span>{stk.base_symbol}</span>
-                          <span className={stk.day_change_pct >= 0 ? "text-emerald-500" : "text-rose-500"}>
-                            {stk.day_change_pct >= 0 ? "+" : ""}{stk.day_change_pct}%
-                          </span>
-                          <ArrowUpRight size={11} className="text-slate-400" />
-                        </Link>
-                      ))}
-                    </div>
+                {/* Related Stocks & Source Footer */}
+                <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {item.related_stocks.length > 0 && (
+                      <>
+                        <span className="text-[11px] text-slate-400 font-medium">Tickers:</span>
+                        {item.related_stocks.map((stk) => (
+                          <Link
+                            key={stk.symbol}
+                            href={`/markets/${encodeURIComponent(stk.symbol)}`}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-emerald-500/15 hover:text-emerald-300 border border-white/[0.08] text-xs font-mono font-bold transition-colors text-slate-200"
+                          >
+                            <span>{stk.base_symbol}</span>
+                            <span className={stk.day_change_pct >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                              {stk.day_change_pct >= 0 ? "+" : ""}{stk.day_change_pct}%
+                            </span>
+                            <ArrowUpRight size={11} className="text-slate-400" />
+                          </Link>
+                        ))}
+                      </>
+                    )}
+                  </div>
 
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500">
+                  <div className="flex items-center gap-3 ml-auto">
+                    {item.url && (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 font-semibold hover:underline"
+                      >
+                        Read Story <ArrowUpRight size={11} />
+                      </a>
+                    )}
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-400 border border-white/[0.06]">
                       {item.impact_severity} IMPACT
                     </span>
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
