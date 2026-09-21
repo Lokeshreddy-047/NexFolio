@@ -140,14 +140,14 @@ export function Header({
       {/* Real-Time Market Ticker Ribbon */}
       <MarketTicker />
 
-      <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 md:px-8 bg-[#030712]/85 backdrop-blur-2xl border-b border-white/[0.08]">
+      <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 md:px-8 bg-white/85 dark:bg-[#030712]/85 backdrop-blur-2xl border-b border-slate-200 dark:border-white/[0.08] transition-colors duration-150">
         {/* Left: Title & Subtitle */}
         <div className="flex flex-col min-w-0 pl-12 lg:pl-0 flex-1 mr-4">
-          <h1 className="text-lg md:text-xl font-black tracking-tight text-white truncate flex items-center gap-2">
+          <h1 className="text-lg md:text-xl font-black tracking-tight text-slate-900 dark:text-white truncate flex items-center gap-2">
             {title}
           </h1>
           {subtitle && (
-            <p className="text-xs text-slate-400 truncate hidden 2xl:block">
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate hidden 2xl:block">
               {subtitle}
             </p>
           )}
@@ -162,12 +162,12 @@ export function Header({
                 new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true })
               );
             }}
-            className="hidden 2xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-400 hover:text-slate-200 text-xs transition-all shadow-inner"
+            className="hidden 2xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100/80 dark:bg-white/[0.03] hover:bg-slate-200/70 dark:hover:bg-white/[0.07] border border-slate-200 dark:border-white/[0.08] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 text-xs transition-all shadow-inner"
             title="Search commands, stocks & actions (⌘K)"
           >
             <Search size={14} className="text-slate-400" />
             <span className="text-[11px] font-medium hidden md:inline">Quick Search</span>
-            <kbd className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/[0.1] text-slate-400">
+            <kbd className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.1] text-slate-500 dark:text-slate-400">
               ⌘K
             </kbd>
           </button>
@@ -179,9 +179,9 @@ export function Header({
                 setIsDropdownOpen(!isDropdownOpen);
                 setIsProfileOpen(false);
               }}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-slate-200 text-xs font-semibold hover:border-emerald-500/40 hover:bg-white/[0.07] transition-all shadow-sm"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] text-slate-800 dark:text-slate-200 text-xs font-semibold hover:border-emerald-500/50 hover:bg-slate-50 dark:hover:bg-white/[0.07] transition-all shadow-sm"
             >
-              <Briefcase size={14} className="text-emerald-400 shrink-0" />
+              <Briefcase size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span className="max-w-[130px] sm:max-w-[180px] truncate">
                 {activePortfolio?.name || "Select Portfolio"}
               </span>
@@ -201,9 +201,9 @@ export function Header({
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -6 }}
                     transition={{ type: "spring", damping: 25, stiffness: 350 }}
-                    className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#070c1a]/95 border border-white/[0.08] shadow-2xl p-2 z-50 backdrop-blur-xl"
+                    className="absolute right-0 mt-2 w-64 rounded-2xl bg-white/95 dark:bg-[#070c1a]/95 border border-slate-200 dark:border-white/[0.08] shadow-2xl p-2 z-50 backdrop-blur-xl"
                   >
-                    <div className="px-3 py-2 border-b border-white/[0.08] mb-1">
+                    <div className="px-3 py-2 border-b border-slate-200 dark:border-white/[0.08] mb-1">
                       <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                         Your Portfolios
                       </p>
@@ -223,28 +223,28 @@ export function Header({
                               w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-left transition-colors
                               ${
                                 isSelected
-                                  ? "bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20"
-                                  : "text-slate-300 hover:bg-white/[0.04]"
+                                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-500/20"
+                                  : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/[0.04]"
                               }
                             `}
                           >
                             <div className="min-w-0 flex-1 mr-2">
                               <p className="truncate">{p.name}</p>
-                              <p className="text-[10px] text-slate-400">
+                              <p className="text-[10px] text-slate-500 dark:text-slate-400">
                                 {p.holdings_count || 0} holdings · ₹
                                 {p.current_value?.toLocaleString("en-IN") || 0}
                               </p>
                             </div>
-                            {isSelected && <Check size={14} className="text-emerald-400 shrink-0" />}
+                            {isSelected && <Check size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />}
                           </button>
                         );
                       })}
                     </div>
 
-                    <div className="pt-2 mt-1 border-t border-white/[0.08]">
+                    <div className="pt-2 mt-1 border-t border-slate-200 dark:border-white/[0.08]">
                       <button
                         onClick={() => setIsCreateModalOpen(true)}
-                        className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold transition-colors border border-emerald-500/20"
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold transition-colors border border-emerald-200 dark:border-emerald-500/20"
                       >
                         <Plus size={14} />
                         <span>New Portfolio</span>
@@ -257,8 +257,8 @@ export function Header({
           </div>
 
           {/* Market Status Pill */}
-          <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold shadow-[0_0_15px_rgba(16,231,157,0.1)]">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 text-[11px] font-semibold shadow-sm dark:shadow-[0_0_15px_rgba(16,231,157,0.1)]">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>NSE: ACTIVE</span>
           </div>
 
@@ -271,7 +271,7 @@ export function Header({
                 setIsProfileOpen(false);
                 setIsThemeOpen(false);
               }}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent hover:border-white/[0.08] transition-colors relative"
+              className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/[0.04] border border-transparent hover:border-slate-200 dark:hover:border-white/[0.08] transition-colors relative"
               title="Notifications"
             >
               <Bell size={18} />
@@ -294,17 +294,17 @@ export function Header({
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -6 }}
                     transition={{ type: "spring", damping: 25, stiffness: 350 }}
-                    className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-[#070c1a]/95 border border-white/[0.08] shadow-2xl p-3 z-50 backdrop-blur-xl space-y-2"
+                    className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white/95 dark:bg-[#070c1a]/95 border border-slate-200 dark:border-white/[0.08] shadow-2xl p-3 z-50 backdrop-blur-xl space-y-2"
                   >
-                    <div className="flex items-center justify-between px-2 py-1 border-b border-white/[0.08]">
+                    <div className="flex items-center justify-between px-2 py-1 border-b border-slate-200 dark:border-white/[0.08]">
                       <div className="flex items-center gap-2">
-                        <Bell size={14} className="text-emerald-400" />
-                        <p className="text-xs font-bold text-white">Alerts & Notifications</p>
+                        <Bell size={14} className="text-emerald-600 dark:text-emerald-400" />
+                        <p className="text-xs font-bold text-slate-900 dark:text-white">Alerts & Notifications</p>
                       </div>
                       {unreadCount > 0 && (
                         <button
                           onClick={handleMarkAllRead}
-                          className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
+                          className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
                         >
                           Mark all read
                         </button>
@@ -313,7 +313,7 @@ export function Header({
 
                     <div className="max-h-72 overflow-y-auto space-y-1.5 p-1">
                       {notifications.length === 0 ? (
-                        <div className="py-8 text-center text-xs text-slate-500">
+                        <div className="py-8 text-center text-xs text-slate-400 dark:text-slate-500">
                           No notifications at this time.
                         </div>
                       ) : (
@@ -322,17 +322,17 @@ export function Header({
                             key={n.id}
                             className={`p-3 rounded-xl border text-xs space-y-1 transition-colors ${
                               n.is_read
-                                ? "bg-black/30 border-white/[0.04] text-slate-400"
-                                : "bg-white/[0.03] border-white/[0.08] text-slate-200"
+                                ? "bg-slate-100/60 dark:bg-black/30 border-slate-200/60 dark:border-white/[0.04] text-slate-500 dark:text-slate-400"
+                                : "bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-white/[0.08] text-slate-800 dark:text-slate-200"
                             }`}
                           >
                             <div className="flex items-center justify-between">
                               <span className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold border ${
                                 n.severity === "CRITICAL"
-                                  ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                                  ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/30"
                                   : n.severity === "WARNING"
-                                  ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
-                                  : "bg-indigo-500/10 text-indigo-400 border-indigo-500/30"
+                                  ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30"
+                                  : "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/30"
                               }`}>
                                 {n.severity}
                               </span>
@@ -340,22 +340,22 @@ export function Header({
                               {!n.is_read && (
                                 <button
                                   onClick={() => handleMarkSingleRead(n.id)}
-                                  className="text-[10px] text-slate-500 hover:text-white"
+                                  className="text-[10px] text-slate-400 hover:text-slate-900 dark:text-slate-500 dark:hover:text-white"
                                 >
                                   Mark read
                                 </button>
                               )}
                             </div>
 
-                            <p className="font-bold text-white text-xs">{n.title}</p>
-                            <p className="text-[11px] text-slate-300 leading-relaxed">{n.message}</p>
+                            <p className="font-bold text-slate-900 dark:text-white text-xs">{n.title}</p>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">{n.message}</p>
 
                             {n.action_link && (
                               <div className="pt-1">
                                 <Link
                                   href={n.action_link}
                                   onClick={() => setIsNotificationOpen(false)}
-                                  className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1"
+                                  className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 inline-flex items-center gap-1"
                                 >
                                   View Action ➔
                                 </Link>
@@ -380,11 +380,11 @@ export function Header({
                 setIsDropdownOpen(false);
                 setIsProfileOpen(false);
               }}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent hover:border-white/[0.08] transition-colors"
+              className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/[0.04] border border-transparent hover:border-slate-200 dark:hover:border-white/[0.08] transition-colors"
               title={`Active Theme: ${theme.toUpperCase()} (${resolvedTheme} mode)`}
             >
               {resolvedTheme === "light" ? (
-                <Sun size={18} className="text-amber-400" />
+                <Sun size={18} className="text-amber-500" />
               ) : theme === "system" ? (
                 <Laptop size={18} className="text-indigo-400" />
               ) : (
@@ -404,9 +404,9 @@ export function Header({
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -6 }}
                     transition={{ type: "spring", damping: 25, stiffness: 350 }}
-                    className="absolute right-0 mt-2 w-48 rounded-2xl bg-[#070c1a]/95 border border-white/[0.08] shadow-2xl p-2 z-50 backdrop-blur-xl space-y-1"
+                    className="absolute right-0 mt-2 w-48 rounded-2xl bg-white/95 dark:bg-[#070c1a]/95 border border-slate-200 dark:border-white/[0.08] shadow-2xl p-2 z-50 backdrop-blur-xl space-y-1"
                   >
-                    <div className="px-3 py-1.5 border-b border-white/[0.08] mb-1">
+                    <div className="px-3 py-1.5 border-b border-slate-200 dark:border-white/[0.08] mb-1">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                         UI Theme
                       </p>
@@ -419,15 +419,15 @@ export function Header({
                       }}
                       className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-left transition-colors ${
                         theme === "dark"
-                          ? "bg-teal-500/10 text-teal-300 font-bold border border-teal-500/20"
-                          : "text-slate-300 hover:bg-white/[0.04]"
+                          ? "bg-teal-50 text-teal-800 font-bold border border-teal-200 dark:bg-teal-500/10 dark:text-teal-300 dark:border-teal-500/20"
+                          : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/[0.04]"
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <Moon size={14} className="text-teal-400" />
+                        <Moon size={14} className="text-teal-500 dark:text-teal-400" />
                         <span>Dark (Obsidian)</span>
                       </div>
-                      {theme === "dark" && <Check size={14} className="text-teal-400" />}
+                      {theme === "dark" && <Check size={14} className="text-teal-600 dark:text-teal-400" />}
                     </button>
 
                     <button
@@ -437,15 +437,15 @@ export function Header({
                       }}
                       className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-left transition-colors ${
                         theme === "light"
-                          ? "bg-amber-500/10 text-amber-500 font-bold border border-amber-500/20"
-                          : "text-slate-300 hover:bg-white/[0.04]"
+                          ? "bg-amber-50 text-amber-800 font-bold border border-amber-200 dark:bg-amber-500/10 dark:text-amber-500 dark:border-amber-500/20"
+                          : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/[0.04]"
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
                         <Sun size={14} className="text-amber-500" />
                         <span>Light (Clean)</span>
                       </div>
-                      {theme === "light" && <Check size={14} className="text-amber-500" />}
+                      {theme === "light" && <Check size={14} className="text-amber-600 dark:text-amber-500" />}
                     </button>
 
                     <button
@@ -455,15 +455,15 @@ export function Header({
                       }}
                       className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-left transition-colors ${
                         theme === "system"
-                          ? "bg-indigo-500/10 text-indigo-300 font-bold border border-indigo-500/20"
-                          : "text-slate-300 hover:bg-white/[0.04]"
+                          ? "bg-indigo-50 text-indigo-800 font-bold border border-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-300 dark:border-indigo-500/20"
+                          : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/[0.04]"
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <Laptop size={14} className="text-indigo-400" />
+                        <Laptop size={14} className="text-indigo-500 dark:text-indigo-400" />
                         <span>System Sync</span>
                       </div>
-                      {theme === "system" && <Check size={14} className="text-indigo-400" />}
+                      {theme === "system" && <Check size={14} className="text-indigo-600 dark:text-indigo-400" />}
                     </button>
                   </motion.div>
                 </>
@@ -490,7 +490,7 @@ export function Header({
                   className="w-8 h-8 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-slate-800 text-emerald-400 font-bold text-xs flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 font-bold text-xs flex items-center justify-center border border-slate-200 dark:border-transparent">
                   {user?.displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
                 </div>
               )}
@@ -508,23 +508,23 @@ export function Header({
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -6 }}
                     transition={{ type: "spring", damping: 25, stiffness: 350 }}
-                    className="absolute right-0 mt-2 w-64 rounded-3xl bg-[#070c1a]/95 border border-white/[0.08] shadow-2xl p-2.5 z-50 backdrop-blur-xl space-y-1.5"
+                    className="absolute right-0 mt-2 w-64 rounded-3xl bg-white/95 dark:bg-[#070c1a]/95 border border-slate-200 dark:border-white/[0.08] shadow-2xl p-2.5 z-50 backdrop-blur-xl space-y-1.5"
                   >
                     {/* User Profile Header Card */}
-                    <div className="p-3 rounded-2xl bg-black/40 border border-white/[0.08] mb-1 flex items-center gap-3">
+                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.08] mb-1 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-500 to-indigo-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-md">
                         {user?.displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-bold text-white truncate">
+                          <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
                             {user?.displayName || "Investor"}
                           </p>
-                          <span className="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 font-extrabold text-[9px] border border-emerald-500/20 shrink-0">
+                          <span className="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 font-extrabold text-[9px] dark:border-emerald-500/20 shrink-0">
                             PRO
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-400 truncate">
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                           {user?.email}
                         </p>
                       </div>
@@ -535,51 +535,51 @@ export function Header({
                       <Link
                         href="/settings"
                         onClick={() => setIsProfileOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-slate-300 hover:bg-white/[0.04] hover:text-white transition-colors"
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/[0.04] dark:hover:text-white transition-colors"
                       >
-                        <Shield size={15} className="text-emerald-400" />
+                        <Shield size={15} className="text-emerald-600 dark:text-emerald-400" />
                         <span>Account & Security Settings</span>
                       </Link>
 
                       <Link
                         href="/portfolios"
                         onClick={() => setIsProfileOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-slate-300 hover:bg-white/[0.04] hover:text-white transition-colors"
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/[0.04] dark:hover:text-white transition-colors"
                       >
-                        <Briefcase size={15} className="text-indigo-400" />
+                        <Briefcase size={15} className="text-indigo-600 dark:text-indigo-400" />
                         <span>Manage Portfolios</span>
                       </Link>
 
                       <Link
                         href="/holdings"
                         onClick={() => setIsProfileOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-slate-300 hover:bg-white/[0.04] hover:text-white transition-colors"
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/[0.04] dark:hover:text-white transition-colors"
                       >
-                        <Check size={15} className="text-teal-400" />
+                        <Check size={15} className="text-teal-600 dark:text-teal-400" />
                         <span>Holdings & Allocations</span>
                       </Link>
 
                       <Link
                         href="/watchlist"
                         onClick={() => setIsProfileOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-slate-300 hover:bg-white/[0.04] hover:text-white transition-colors"
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/[0.04] dark:hover:text-white transition-colors"
                       >
-                        <Bell size={15} className="text-amber-400" />
+                        <Bell size={15} className="text-amber-500 dark:text-amber-400" />
                         <span>My Watchlist</span>
                       </Link>
                     </div>
 
                     {/* Theme Quick Switcher in Profile Dropdown */}
-                    <div className="pt-2 border-t border-white/[0.08] px-1">
-                      <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1 px-1 font-medium">
+                    <div className="pt-2 border-t border-slate-200 dark:border-white/[0.08] px-1">
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1 px-1 font-medium">
                         <span>Appearance</span>
-                        <span className="capitalize font-bold text-slate-300">{resolvedTheme}</span>
+                        <span className="capitalize font-bold text-slate-700 dark:text-slate-300">{resolvedTheme}</span>
                       </div>
-                      <div className="grid grid-cols-3 gap-1 bg-black/50 p-1 rounded-xl border border-white/[0.08]">
+                      <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-black/50 p-1 rounded-xl border border-slate-200 dark:border-white/[0.08]">
                         <button
                           onClick={() => setTheme("dark")}
                           className={`py-1 px-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors ${
-                            theme === "dark" ? "bg-slate-800 text-teal-300 border border-teal-500/30" : "text-slate-400 hover:text-white"
+                            theme === "dark" ? "bg-white dark:bg-slate-800 text-teal-600 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                           }`}
                         >
                           <Moon size={11} /> Dark
@@ -587,7 +587,7 @@ export function Header({
                         <button
                           onClick={() => setTheme("light")}
                           className={`py-1 px-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors ${
-                            theme === "light" ? "bg-slate-800 text-amber-400 border border-amber-500/30" : "text-slate-400 hover:text-white"
+                            theme === "light" ? "bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                           }`}
                         >
                           <Sun size={11} /> Light
@@ -595,7 +595,7 @@ export function Header({
                         <button
                           onClick={() => setTheme("system")}
                           className={`py-1 px-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors ${
-                            theme === "system" ? "bg-slate-800 text-indigo-300 border border-indigo-500/30" : "text-slate-400 hover:text-white"
+                            theme === "system" ? "bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                           }`}
                         >
                           <Laptop size={11} /> Auto
@@ -604,10 +604,10 @@ export function Header({
                     </div>
 
                     {/* Sign Out Action */}
-                    <div className="pt-1.5 border-t border-white/[0.08]">
+                    <div className="pt-1.5 border-t border-slate-200 dark:border-white/[0.08]">
                       <button
                         onClick={() => signOut()}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-rose-400 hover:bg-rose-500/10 transition-colors font-semibold"
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors font-semibold"
                       >
                         <LogOut size={14} />
                         <span>Sign Out</span>
@@ -628,23 +628,23 @@ export function Header({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-md"
           >
             <motion.div
               initial={{ scale: 0.94, opacity: 0, y: 10 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.94, opacity: 0, y: 10 }}
               transition={{ type: "spring", damping: 25, stiffness: 350 }}
-              className="w-full max-w-md bg-[#070c1a] border border-white/[0.08] rounded-3xl p-6 shadow-2xl space-y-5"
+              className="w-full max-w-md bg-white dark:bg-[#070c1a] border border-slate-200 dark:border-white/[0.08] rounded-3xl p-6 shadow-2xl space-y-5"
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Briefcase size={20} className="text-emerald-400" />
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Briefcase size={20} className="text-emerald-600 dark:text-emerald-400" />
                   Create New Portfolio
                 </h3>
                 <button
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="text-slate-400 hover:text-white text-sm p-1 rounded-lg hover:bg-white/[0.05]"
+                  className="text-slate-400 hover:text-slate-800 dark:hover:text-white text-sm p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.05]"
                 >
                   ✕
                 </button>
@@ -652,7 +652,7 @@ export function Header({
 
               <form onSubmit={handleCreate} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
                     Portfolio Name
                   </label>
                   <input
@@ -661,7 +661,7 @@ export function Header({
                     value={newPortfolioName}
                     onChange={(e) => setNewPortfolioName(e.target.value)}
                     required
-                    className="w-full px-4 py-2.5 rounded-xl bg-black/50 border border-white/[0.08] text-white placeholder-slate-400 text-sm focus:outline-none focus:border-emerald-500/50"
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:border-emerald-500/60"
                   />
                 </div>
 
@@ -669,14 +669,14 @@ export function Header({
                   <button
                     type="button"
                     onClick={() => setIsCreateModalOpen(false)}
-                    className="flex-1 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-slate-300 text-xs font-semibold hover:bg-white/[0.08] transition-colors"
+                    className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-200 dark:hover:bg-white/[0.08] transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting || !newPortfolioName.trim()}
-                    className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-slate-950 text-xs font-bold hover:bg-emerald-400 transition-colors disabled:opacity-50"
+                    className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950 text-xs font-bold transition-colors disabled:opacity-50 shadow-sm"
                   >
                     {isSubmitting ? "Creating..." : "Create Portfolio"}
                   </button>

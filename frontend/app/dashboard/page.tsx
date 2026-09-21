@@ -16,6 +16,7 @@ import {
   Cell,
 } from "recharts";
 import { useAuth } from "@/components/auth-provider";
+import { useTheme } from "@/components/theme-provider";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
 import { DataPedigreeBadge } from "@/components/data-badge";
@@ -63,6 +64,7 @@ const SECTOR_COLORS = [
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { resolvedTheme } = useTheme();
 
   const [portfolios, setPortfolios] = useState<PortfolioSummary[]>([]);
   const [activePortfolioId, setActivePortfolioId] = useState<string>("");
@@ -279,7 +281,7 @@ export default function DashboardPage() {
   const recentActivity = overview?.recent_activity || [];
 
   return (
-    <div className="flex min-h-screen bg-[#030712] text-slate-100 font-sans antialiased">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-slate-100 font-sans antialiased transition-colors duration-150">
       <Sidebar />
 
       <div className="flex flex-col flex-1 min-w-0">
@@ -321,30 +323,30 @@ export default function DashboardPage() {
                 {/* Left: Net Worth & Active Portfolio Name */}
                 <div className="space-y-2.5">
                   <div className="flex items-center gap-3">
-                    <span className="text-[11px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full shadow-[0_0_15px_rgba(16,231,157,0.2)] flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                    <span className="text-[11px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 px-3 py-1 rounded-full shadow-xs dark:shadow-[0_0_15px_rgba(16,231,157,0.2)] flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
                       INSTITUTIONAL COCKPIT
                     </span>
                     <DataPedigreeBadge badge={pulse?.data_badge || activeBadge} />
                     {connectionStatus === "connected" && (
-                      <span className="text-[10px] text-cyan-400 font-mono font-bold flex items-center gap-1.5 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-[10px] text-cyan-700 dark:text-cyan-400 font-mono font-bold flex items-center gap-1.5 bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/20 px-2.5 py-0.5 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
                         5ms STREAM ACTIVE
                       </span>
                     )}
                   </div>
 
                   <div className="flex flex-wrap items-baseline gap-4">
-                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300 flex items-center">
+                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 dark:from-white dark:via-slate-100 dark:to-slate-300 flex items-center">
                       <AnimatedCounter value={pulse?.total_value || 0} prefix="₹" decimals={2} />
                     </h1>
 
                     {/* Day P&L Badge */}
                     <div
-                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-sm font-black border shadow-lg ${
+                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-sm font-black border shadow-sm dark:shadow-lg ${
                         (pulse?.day_pnl || 0) >= 0
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-emerald-500/10"
-                          : "bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-rose-500/10"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:text-emerald-400 dark:shadow-emerald-500/10"
+                          : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:border-rose-500/30 dark:text-rose-400 dark:shadow-rose-500/10"
                       }`}
                     >
                       <span className="text-xs">{(pulse?.day_pnl || 0) >= 0 ? "▲" : "▼"}</span>
@@ -356,30 +358,30 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <p className="text-xs text-slate-400 flex items-center gap-2">
-                    Active Portfolio: <strong className="text-slate-100 font-bold bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.08]">{overview?.portfolio.name}</strong> • {pulse?.holdings_count || 0} Open Positions
+                  <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                    Active Portfolio: <strong className="text-slate-800 dark:text-slate-100 font-bold bg-slate-100 dark:bg-white/[0.04] px-2 py-0.5 rounded border border-slate-200 dark:border-white/[0.08]">{overview?.portfolio.name}</strong> • {pulse?.holdings_count || 0} Open Positions
                   </p>
                 </div>
 
                 {/* Right: Secondary KPI Grid & Snapshot Checkpoint Button */}
                 <div className="flex flex-wrap items-center gap-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-black/50 p-4 rounded-2xl border border-white/[0.08] backdrop-blur-xl">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-100/80 dark:bg-black/50 p-4 rounded-2xl border border-slate-200 dark:border-white/[0.08] backdrop-blur-xl shadow-xs">
                     <div className="px-3">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Invested Capital</div>
-                      <div className="text-base font-black text-slate-200 mt-1 font-mono">
+                      <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Invested Capital</div>
+                      <div className="text-base font-black text-slate-900 dark:text-slate-200 mt-1 font-mono">
                         <AnimatedCounter value={pulse?.invested_capital || 0} prefix="₹" decimals={2} />
                       </div>
                     </div>
-                    <div className="px-3 border-l border-white/[0.08]">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Overall ROI</div>
-                      <div className={`text-base font-black mt-1 font-mono flex items-center ${(pulse?.total_roi_pct || 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                    <div className="px-3 border-l border-slate-200 dark:border-white/[0.08]">
+                      <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Overall ROI</div>
+                      <div className={`text-base font-black mt-1 font-mono flex items-center ${(pulse?.total_roi_pct || 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                         {(pulse?.total_roi_pct || 0) >= 0 ? "+" : ""}
                         <AnimatedCounter value={pulse?.total_roi_pct || 0} suffix="%" decimals={2} />
                       </div>
                     </div>
-                    <div className="px-3 border-l border-white/[0.08] col-span-2 sm:col-span-1">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total P&L</div>
-                      <div className={`text-base font-black mt-1 font-mono ${(pulse?.total_pnl || 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                    <div className="px-3 border-l border-slate-200 dark:border-white/[0.08] col-span-2 sm:col-span-1">
+                      <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Total P&L</div>
+                      <div className={`text-base font-black mt-1 font-mono ${(pulse?.total_pnl || 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                         <AnimatedCounter value={pulse?.total_pnl || 0} prefix="₹" decimals={2} />
                       </div>
                     </div>
@@ -485,27 +487,31 @@ export default function DashboardPage() {
                     </defs>
                     <XAxis
                       dataKey="date"
-                      stroke="#475569"
+                      stroke={resolvedTheme === "light" ? "#64748b" : "#475569"}
                       fontSize={11}
                       tickLine={false}
-                      axisLine={{ stroke: "#334155" }}
+                      axisLine={{ stroke: resolvedTheme === "light" ? "#cbd5e1" : "#334155" }}
                     />
                     <YAxis
-                      stroke="#475569"
+                      stroke={resolvedTheme === "light" ? "#64748b" : "#475569"}
                       fontSize={11}
                       tickLine={false}
-                      axisLine={{ stroke: "#334155" }}
+                      axisLine={{ stroke: resolvedTheme === "light" ? "#cbd5e1" : "#334155" }}
                       tickFormatter={(v) =>
                         timelineMetric === "RETURN" ? `${v}%` : `₹${(v / 1000).toFixed(0)}k`
                       }
                     />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "#0f172a",
-                        borderColor: "#334155",
+                        backgroundColor: resolvedTheme === "light" ? "#ffffff" : "#0f172a",
+                        borderColor: resolvedTheme === "light" ? "#e2e8f0" : "#334155",
+                        color: resolvedTheme === "light" ? "#0f172a" : "#f8fafc",
                         borderRadius: "1rem",
-                        boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.5)",
+                        boxShadow: resolvedTheme === "light" ? "0 10px 25px -5px rgba(0, 0, 0, 0.08)" : "0 20px 25px -5px rgb(0 0 0 / 0.5)",
                         fontSize: "12px",
+                      }}
+                      itemStyle={{
+                        color: resolvedTheme === "light" ? "#0f172a" : "#f8fafc",
                       }}
                       formatter={(val, name) => {
                         const v = Number(val) || 0;
@@ -929,8 +935,8 @@ export default function DashboardPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Asset Class Allocation Donut */}
-                <div className="bg-black/40 p-4 rounded-2xl border border-white/[0.06]">
-                  <div className="text-xs font-bold text-slate-300 mb-2">Asset Class Exposure</div>
+                <div className="bg-slate-50 dark:bg-black/40 p-4 rounded-2xl border border-slate-200 dark:border-white/[0.06]">
+                  <div className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">Asset Class Exposure</div>
                   {assetAlloc.length > 0 ? (
                     <div className="h-44 flex items-center">
                       <div className="w-1/2 h-full">
@@ -949,7 +955,16 @@ export default function DashboardPage() {
                               ))}
                             </Pie>
                             <Tooltip
-                              contentStyle={{ backgroundColor: "#070c1a", borderColor: "rgba(255,255,255,0.1)", borderRadius: "0.75rem" }}
+                              contentStyle={{
+                                backgroundColor: resolvedTheme === "light" ? "#ffffff" : "#070c1a",
+                                borderColor: resolvedTheme === "light" ? "#e2e8f0" : "rgba(255,255,255,0.1)",
+                                color: resolvedTheme === "light" ? "#0f172a" : "#f8fafc",
+                                borderRadius: "0.75rem",
+                                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.08)",
+                              }}
+                              itemStyle={{
+                                color: resolvedTheme === "light" ? "#0f172a" : "#f8fafc",
+                              }}
                               formatter={(val) => [`${Number(val || 0).toFixed(1)}%`]}
                             />
                           </PieChart>

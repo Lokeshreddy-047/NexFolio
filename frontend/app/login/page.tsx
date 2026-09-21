@@ -229,9 +229,9 @@ export default function LoginPage() {
 
   if (authLoading) {
     return (
-      <main className="min-h-screen bg-[#030712] flex flex-col items-center justify-center space-y-4">
-        <div className="w-10 h-10 border-2 border-emerald-500/20 border-t-emerald-400 rounded-full animate-spin" />
-        <span className="text-xs font-mono tracking-widest text-slate-400">INITIALIZING SECURITY ENGINE...</span>
+      <main className="min-h-screen bg-slate-50 dark:bg-[#030712] flex flex-col items-center justify-center space-y-4">
+        <div className="w-10 h-10 border-2 border-emerald-500/20 border-t-emerald-500 dark:border-t-emerald-400 rounded-full animate-spin" />
+        <span className="text-xs font-mono tracking-widest text-slate-500 dark:text-slate-400">INITIALIZING SECURITY ENGINE...</span>
       </main>
     );
   }
@@ -242,76 +242,76 @@ export default function LoginPage() {
       title: "TreeSHAP ML Risk & Explainability Engine",
       badge: "91.0% ACCURACY",
       desc: "XGBoost classifier with O(TLD²) game-theoretic feature attributions for transparent portfolio risk verdicts.",
-      accent: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+      accent: "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20"
     },
     {
       icon: <Flame size={18} />,
       title: "AI-Powered IPO Radar & Risk Scorecard",
       badge: "LIVE GMP",
       desc: "Multi-factor quantitative valuation, live subscription velocity, and retail allotment probability across NSE/BSE.",
-      accent: "text-amber-400 bg-amber-500/10 border-amber-500/20"
+      accent: "text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20"
     },
     {
       icon: <Newspaper size={18} />,
       title: "Market News & Macro Sentiment Radar",
       badge: "NLP POLARITY",
       desc: "Real-time Indian financial headlines with entity matching, sentiment polarity, and live macroeconomic levers.",
-      accent: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20"
+      accent: "text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 border-cyan-200 dark:border-cyan-500/20"
     },
     {
       icon: <FileSpreadsheet size={18} />,
       title: "Income-tax Act, 2025 Statutory Tax Suite",
       badge: "FY2025-26",
       desc: "Automated STCG 20% & LTCG 12.5% computation with ₹1.25L exemption limits and tax-loss harvesting recommendations.",
-      accent: "text-purple-400 bg-purple-500/10 border-purple-500/20"
+      accent: "text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/20"
     },
     {
       icon: <Zap size={18} />,
       title: "Sub-5ms Fast Loop Multi-Broker Stream",
       badge: "292+ EQUITIES",
       desc: "Zero-latency SSE market ticks via Upstox & Yahoo Finance, revaluing holdings and Day P&L instantaneously.",
-      accent: "text-teal-400 bg-teal-500/10 border-teal-500/20"
+      accent: "text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-500/10 border-teal-200 dark:border-teal-500/20"
     },
     {
       icon: <TrendingUp size={18} />,
       title: "What-If Trade Simulation & Rebalance Sandbox",
       badge: "ZERO-MUTATION",
       desc: "Stress-test capital deployments and sector rebalancing scenarios without modifying historical portfolio records.",
-      accent: "text-indigo-400 bg-indigo-500/10 border-indigo-500/20"
+      accent: "text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/20"
     }
   ];
 
   return (
-    <main className="min-h-screen bg-[#030712] text-slate-100 flex flex-col justify-between relative overflow-hidden font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
+    <main className="min-h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-slate-100 flex flex-col justify-between relative overflow-hidden font-sans selection:bg-emerald-500/30 selection:text-emerald-900 dark:selection:text-emerald-200">
       {/* Dynamic Ambient Background Glows */}
-      <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute top-1/2 -right-40 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute -bottom-40 left-1/3 w-[600px] h-[600px] bg-indigo-500/10 rounded-full blur-[160px] pointer-events-none" />
+      <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-1/2 -right-40 w-[500px] h-[500px] bg-cyan-500/5 dark:bg-cyan-500/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute -bottom-40 left-1/3 w-[600px] h-[600px] bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-[160px] pointer-events-none" />
 
       {/* Top Header Bar */}
       <header className="relative z-10 w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3 group">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 p-[1px] shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/40 transition-all">
-            <div className="w-full h-full bg-[#030712] rounded-[15px] flex items-center justify-center">
-              <BrainCircuit className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition-transform" />
+            <div className="w-full h-full bg-white dark:bg-[#030712] rounded-[15px] flex items-center justify-center">
+              <BrainCircuit className="w-5 h-5 text-emerald-500 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
             </div>
           </div>
           <div className="flex flex-col">
-            <span className="font-black text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+            <span className="font-black text-lg tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 dark:from-white dark:via-slate-200 dark:to-slate-400 bg-clip-text text-transparent">
               NexFolio
             </span>
-            <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-400/80 -mt-1 font-mono">
+            <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-600 dark:text-emerald-400/80 -mt-1 font-mono">
               AI Intelligence
             </span>
           </div>
         </Link>
 
         <div className="flex items-center gap-3">
-          <span className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-slate-300 backdrop-blur-md">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 shadow-sm backdrop-blur-md">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
             NSE Live Stream Active
           </span>
-          <span className="text-[11px] font-mono text-slate-400 hidden md:block">
+          <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden md:block">
             Income-tax Act, 2025 Compliant
           </span>
         </div>
@@ -324,14 +324,14 @@ export default function LoginPage() {
           {/* Left Column: Visual Feature Showcase (Desktop) */}
           <div className="hidden lg:flex lg:col-span-7 flex-col justify-center space-y-6 pr-4">
             <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold tracking-wide">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold tracking-wide">
                 <Sparkles size={13} />
                 <span>INSTITUTIONAL GRADE RISK PLATFORM</span>
               </div>
-              <h1 className="text-3xl xl:text-4xl font-black text-white tracking-tight leading-[1.15]">
+              <h1 className="text-3xl xl:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.15]">
                 Quantitative Intelligence for Modern Portfolios.
               </h1>
-              <p className="text-xs xl:text-sm text-slate-400 leading-relaxed max-w-xl">
+              <p className="text-xs xl:text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
                 Real-time valuation across 292+ Indian equities, backed by transparent TreeSHAP explainability, IPO valuation radar, and Income-tax Act, 2025 statutory compliance.
               </p>
             </div>
@@ -344,20 +344,20 @@ export default function LoginPage() {
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 + i * 0.05, duration: 0.4 }}
-                  className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-md hover:border-white/[0.15] transition-all group"
+                  className="p-3 rounded-2xl bg-white/80 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] backdrop-blur-md hover:border-slate-300 dark:hover:border-white/[0.15] shadow-sm transition-all group"
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <div className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 ${f.accent}`}>
                       {f.icon}
                     </div>
-                    <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded bg-white/[0.04] text-slate-400 border border-white/[0.06]">
+                    <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06]">
                       {f.badge}
                     </span>
                   </div>
-                  <h4 className="text-xs font-bold text-slate-200 group-hover:text-white transition-colors">
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
                     {f.title}
                   </h4>
-                  <p className="text-[10px] text-slate-400 mt-1 leading-relaxed line-clamp-2">
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed line-clamp-2">
                     {f.desc}
                   </p>
                 </motion.div>
@@ -365,8 +365,8 @@ export default function LoginPage() {
             </div>
 
             {/* Live Infrastructure Badge */}
-            <div className="flex items-center gap-3 pt-1 text-xs text-slate-400 font-mono">
-              <span className="flex items-center gap-1.5 text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 text-[11px]">
+            <div className="flex items-center gap-3 pt-1 text-xs text-slate-500 dark:text-slate-400 font-mono">
+              <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-500/20 text-[11px]">
                 <Radio size={12} className="animate-pulse" />
                 LIVE REST & SSE STREAM
               </span>
@@ -379,7 +379,7 @@ export default function LoginPage() {
 
           {/* Right Column: Authentication Card */}
           <div className="lg:col-span-5 w-full max-w-md mx-auto">
-            <div className="relative rounded-3xl bg-[#070c1a]/90 border border-white/[0.08] p-6 sm:p-8 backdrop-blur-2xl shadow-2xl shadow-black/80 overflow-hidden">
+            <div className="relative rounded-3xl bg-white/95 dark:bg-[#070c1a]/90 border border-slate-200 dark:border-white/[0.08] p-6 sm:p-8 backdrop-blur-2xl shadow-xl dark:shadow-2xl shadow-slate-200/50 dark:shadow-black/80 overflow-hidden">
               
               {/* Top ambient shine */}
               <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-60" />
@@ -389,10 +389,10 @@ export default function LoginPage() {
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                      <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                         {authMode === "SIGN_IN" ? "Welcome Back" : "Create Account"}
                       </h2>
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                         {authMode === "SIGN_IN"
                           ? "Enter your credentials to access your intelligence dashboard."
                           : "Join NexFolio to analyze and safeguard your investments."}
@@ -401,7 +401,7 @@ export default function LoginPage() {
                   </div>
 
                   {/* Mode Tab Switcher with Framer Motion layoutId */}
-                  <div className="flex bg-black/50 p-1 rounded-2xl border border-white/[0.08] text-xs font-bold relative">
+                  <div className="flex bg-slate-100 dark:bg-black/50 p-1 rounded-2xl border border-slate-200 dark:border-white/[0.08] text-xs font-bold relative">
                     <button
                       type="button"
                       onClick={() => {
@@ -411,15 +411,15 @@ export default function LoginPage() {
                       }}
                       className={`relative flex-1 py-2 rounded-xl transition-colors z-10 ${
                         authMode === "SIGN_IN"
-                          ? "text-emerald-400"
-                          : "text-slate-400 hover:text-slate-200"
+                          ? "text-emerald-700 dark:text-emerald-400"
+                          : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
                       }`}
                     >
                       {authMode === "SIGN_IN" && (
                         <motion.div
                           layoutId="auth-mode-pill"
                           transition={{ type: "spring", damping: 25, stiffness: 350 }}
-                          className="absolute inset-0 bg-white/[0.08] border border-white/[0.1] rounded-xl shadow-sm -z-10"
+                          className="absolute inset-0 bg-white dark:bg-white/[0.08] border border-slate-200/80 dark:border-white/[0.1] rounded-xl shadow-sm -z-10"
                         />
                       )}
                       Sign In
@@ -434,15 +434,15 @@ export default function LoginPage() {
                       }}
                       className={`relative flex-1 py-2 rounded-xl transition-colors z-10 ${
                         authMode === "REGISTER"
-                          ? "text-emerald-400"
-                          : "text-slate-400 hover:text-slate-200"
+                          ? "text-emerald-700 dark:text-emerald-400"
+                          : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
                       }`}
                     >
                       {authMode === "REGISTER" && (
                         <motion.div
                           layoutId="auth-mode-pill"
                           transition={{ type: "spring", damping: 25, stiffness: 350 }}
-                          className="absolute inset-0 bg-white/[0.08] border border-white/[0.1] rounded-xl shadow-sm -z-10"
+                          className="absolute inset-0 bg-white dark:bg-white/[0.08] border border-slate-200/80 dark:border-white/[0.1] rounded-xl shadow-sm -z-10"
                         />
                       )}
                       Create Account
@@ -451,10 +451,10 @@ export default function LoginPage() {
                 </div>
               ) : (
                 <div className="space-y-2 mb-4">
-                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                     Reset Password
                   </h2>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Enter your email to receive secure recovery instructions.
                   </p>
                 </div>
@@ -467,9 +467,9 @@ export default function LoginPage() {
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
-                    className="mt-4 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2.5"
+                    className="mt-4 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2.5"
                   >
-                    <AlertCircle size={15} className="shrink-0 mt-0.5 text-rose-400" />
+                    <AlertCircle size={15} className="shrink-0 mt-0.5 text-rose-500 dark:text-rose-400" />
                     <span className="leading-snug">{errorMessage}</span>
                   </motion.div>
                 )}
@@ -479,9 +479,9 @@ export default function LoginPage() {
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
-                    className="mt-4 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-start gap-2.5"
+                    className="mt-4 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-start gap-2.5"
                   >
-                    <CheckCircle2 size={15} className="shrink-0 mt-0.5 text-emerald-400" />
+                    <CheckCircle2 size={15} className="shrink-0 mt-0.5 text-emerald-500 dark:text-emerald-400" />
                     <span className="leading-snug">{successMessage}</span>
                   </motion.div>
                 )}
@@ -506,7 +506,7 @@ export default function LoginPage() {
                     exit={{ opacity: 0, height: 0 }}
                     className="space-y-1"
                   >
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                       Full Name
                     </label>
                     <div className="relative">
@@ -520,7 +520,7 @@ export default function LoginPage() {
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
                         required
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/50 border border-white/[0.08] text-white placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-emerald-400/50 transition-colors"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-400/50 transition-colors"
                       />
                     </div>
                   </motion.div>
@@ -528,7 +528,7 @@ export default function LoginPage() {
 
                 {/* Email Address */}
                 <div className="space-y-1">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                     Email Address
                   </label>
                   <div className="relative">
@@ -542,7 +542,7 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/50 border border-white/[0.08] text-white placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-emerald-400/50 transition-colors"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-400/50 transition-colors"
                     />
                   </div>
                 </div>
@@ -551,7 +551,7 @@ export default function LoginPage() {
                 {authMode !== "FORGOT_PASSWORD" && (
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                         Password
                       </label>
                       {authMode === "SIGN_IN" && (
@@ -562,7 +562,7 @@ export default function LoginPage() {
                             setErrorMessage(null);
                             setSuccessMessage(null);
                           }}
-                          className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
+                          className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
                         >
                           Forgot Password?
                         </button>
@@ -579,12 +579,12 @@ export default function LoginPage() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
-                        className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-black/50 border border-white/[0.08] text-white placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-emerald-400/50 transition-colors"
+                        className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-400/50 transition-colors"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                       >
                         {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
@@ -593,11 +593,11 @@ export default function LoginPage() {
                     {/* Dynamic Password Strength Indicator (Register Only) */}
                     {authMode === "REGISTER" && password && (
                       <div className="space-y-1 pt-1">
-                        <div className="flex items-center justify-between text-[10px] text-slate-400">
+                        <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
                           <span>Password Strength:</span>
-                          <span className="font-bold text-slate-200">{pwdStrength.label}</span>
+                          <span className="font-bold text-slate-700 dark:text-slate-200">{pwdStrength.label}</span>
                         </div>
-                        <div className="w-full h-1 bg-white/[0.08] rounded-full overflow-hidden">
+                        <div className="w-full h-1 bg-slate-200 dark:bg-white/[0.08] rounded-full overflow-hidden">
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${pwdStrength.score}%` }}
@@ -618,7 +618,7 @@ export default function LoginPage() {
                     exit={{ opacity: 0, height: 0 }}
                     className="space-y-1"
                   >
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                       Confirm Password
                     </label>
                     <div className="relative">
@@ -632,7 +632,7 @@ export default function LoginPage() {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/50 border border-white/[0.08] text-white placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-emerald-400/50 transition-colors"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-400/50 transition-colors"
                       />
                     </div>
                   </motion.div>
@@ -640,13 +640,13 @@ export default function LoginPage() {
 
                 {/* Remember Me Checkbox */}
                 {authMode === "SIGN_IN" && (
-                  <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+                  <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 pt-1">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                       <input
                         type="checkbox"
                         checked={rememberMe}
                         onChange={(e) => setRememberMe(e.target.checked)}
-                        className="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/20"
+                        className="rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-emerald-500 focus:ring-emerald-500/20"
                       />
                       <span>Keep me signed in</span>
                     </label>
@@ -686,7 +686,7 @@ export default function LoginPage() {
                       setErrorMessage(null);
                       setSuccessMessage(null);
                     }}
-                    className="text-xs text-slate-400 hover:text-white font-semibold transition-colors"
+                    className="text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-semibold transition-colors"
                   >
                     ← Back to Sign In
                   </button>
@@ -697,8 +697,8 @@ export default function LoginPage() {
               {authMode !== "FORGOT_PASSWORD" && (
                 <div className="space-y-4 mt-6">
                   <div className="relative flex items-center justify-center">
-                    <div className="w-full border-t border-white/[0.08]" />
-                    <span className="absolute bg-[#070c1a] px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                    <div className="w-full border-t border-slate-200 dark:border-white/[0.08]" />
+                    <span className="absolute bg-white dark:bg-[#070c1a] px-3 text-[11px] font-semibold text-slate-500 dark:text-slate-500 uppercase tracking-wider">
                       Or continue with
                     </span>
                   </div>
@@ -708,7 +708,7 @@ export default function LoginPage() {
                     type="button"
                     onClick={handleGoogleSignIn}
                     disabled={isGoogleSubmitting}
-                    className="w-full py-2.5 px-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-xs sm:text-sm font-bold text-slate-200 flex items-center justify-center gap-3 transition-all disabled:opacity-50"
+                    className="w-full py-2.5 px-4 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-slate-200 dark:border-white/[0.08] text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center justify-center gap-3 transition-all disabled:opacity-50 shadow-sm"
                   >
                     {isGoogleSubmitting ? (
                       <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
@@ -742,12 +742,12 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={handleDemoAccess}
-                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500/10 via-cyan-500/10 to-indigo-500/10 border border-emerald-500/30 hover:border-emerald-500/50 text-emerald-400 text-xs font-bold flex items-center justify-center gap-2 transition-all group"
+                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500/10 via-cyan-500/10 to-indigo-500/10 border border-emerald-500/30 hover:border-emerald-500/50 text-emerald-700 dark:text-emerald-400 text-xs font-bold flex items-center justify-center gap-2 transition-all group"
                     >
                       <Sparkles size={14} className="group-hover:rotate-12 transition-transform" />
                       <span>Instant Institutional Demo Access</span>
                     </button>
-                    <p className="text-[10px] text-slate-500 text-center mt-1.5 font-mono">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-500 text-center mt-1.5 font-mono">
                       Preloaded with authentic NSE 500 portfolios & 28-feature ML risk pipelines
                     </p>
                   </div>
@@ -759,19 +759,19 @@ export default function LoginPage() {
       </div>
 
       {/* Bottom Footer Ribbon */}
-      <footer className="relative z-10 w-full max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 border-t border-white/[0.08] gap-2">
+      <footer className="relative z-10 w-full max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 dark:text-slate-500 border-t border-slate-200 dark:border-white/[0.08] gap-2">
         <div className="flex items-center gap-2 font-mono">
-          <ShieldCheck size={13} className="text-emerald-400" />
+          <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
           <span>AES-256 Cloud Vault • Income-tax Act, 2025 Compliant</span>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/reports" className="hover:text-slate-300 transition-colors">
+          <Link href="/reports" className="hover:text-slate-800 dark:hover:text-slate-300 transition-colors">
             Tax Engine
           </Link>
-          <Link href="/intelligence" className="hover:text-slate-300 transition-colors">
+          <Link href="/intelligence" className="hover:text-slate-800 dark:hover:text-slate-300 transition-colors">
             TreeSHAP Model
           </Link>
-          <Link href="/ipo" className="hover:text-slate-300 transition-colors">
+          <Link href="/ipo" className="hover:text-slate-800 dark:hover:text-slate-300 transition-colors">
             IPO Radar
           </Link>
         </div>

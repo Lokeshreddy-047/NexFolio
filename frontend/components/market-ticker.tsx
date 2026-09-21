@@ -143,14 +143,14 @@ export function MarketTicker() {
   };
 
   return (
-    <div className="w-full bg-[#02050e]/95 border-b border-white/[0.08] backdrop-blur-md overflow-hidden select-none py-1.5 flex items-center relative z-20">
+    <div className="w-full bg-slate-100/95 dark:bg-[#02050e]/95 border-b border-slate-200 dark:border-white/[0.08] backdrop-blur-md overflow-hidden select-none py-1.5 flex items-center relative z-20">
       {/* Left Station Badge */}
-      <div className="shrink-0 flex items-center gap-2 pl-4 pr-3 border-r border-white/[0.08] bg-[#02050e] z-10 text-[11px] font-bold">
+      <div className="shrink-0 flex items-center gap-2 pl-4 pr-3 border-r border-slate-200 dark:border-white/[0.08] bg-slate-100 dark:bg-[#02050e] z-10 text-[11px] font-bold">
         <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
           <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
         </span>
-        <span className="text-emerald-400 font-mono uppercase tracking-wider">
+        <span className="text-emerald-700 dark:text-emerald-400 font-mono uppercase tracking-wider">
           {connectionStatus === "connected" ? "LIVE" : "MARKET"}
         </span>
         <span className="text-slate-500 font-normal hidden sm:inline">NSE / BSE</span>
@@ -163,15 +163,15 @@ export function MarketTicker() {
             <button
               key={`${item.symbol}-${idx}`}
               onClick={() => handleTickerClick(item)}
-              className="inline-flex items-center gap-2 py-0.5 px-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.08] border border-transparent hover:border-white/[0.1] transition-all cursor-pointer text-left"
+              className="inline-flex items-center gap-2 py-0.5 px-2 rounded-lg bg-white/70 dark:bg-white/[0.02] hover:bg-white dark:hover:bg-white/[0.08] border border-slate-200/60 dark:border-transparent hover:border-slate-300 dark:hover:border-white/[0.1] transition-all cursor-pointer text-left shadow-xs"
             >
-              <span className="font-bold text-slate-200">{item.symbol}</span>
-              <span className="font-mono text-slate-300 font-semibold">{item.price}</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">{item.symbol}</span>
+              <span className="font-mono text-slate-600 dark:text-slate-300 font-semibold">{item.price}</span>
               <span
-                className={`inline-flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.2 rounded ${
+                className={`inline-flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.2 rounded border ${
                   item.isUp
-                    ? "text-emerald-400 bg-emerald-500/10"
-                    : "text-rose-400 bg-rose-500/10"
+                    ? "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-transparent"
+                    : "text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-transparent"
                 }`}
               >
                 {item.isUp ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
@@ -183,10 +183,10 @@ export function MarketTicker() {
       </div>
 
       {/* Right Intelligence Pill */}
-      <div className="shrink-0 hidden md:flex items-center gap-3 pr-4 pl-3 border-l border-white/[0.08] bg-[#02050e] z-10 text-[11px]">
-        <div className="flex items-center gap-1.5 text-indigo-400 font-semibold">
-          <Sparkles size={13} className="text-indigo-400 animate-pulse" />
-          <span className="font-mono text-[10px] tracking-wide uppercase bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+      <div className="shrink-0 hidden md:flex items-center gap-3 pr-4 pl-3 border-l border-slate-200 dark:border-white/[0.08] bg-slate-100 dark:bg-[#02050e] z-10 text-[11px]">
+        <div className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-400 font-semibold">
+          <Sparkles size={13} className="text-indigo-600 dark:text-indigo-400 animate-pulse" />
+          <span className="font-mono text-[10px] tracking-wide uppercase bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-500/20">
             TreeSHAP 91.0% Acc
           </span>
         </div>

@@ -60,9 +60,22 @@ html:not(.light) .glass-panel {
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
+html.light .glass-panel {
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e2e8f0;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.04);
+}
+
 html:not(.light) .glass-panel-hover:hover {
   border-color: rgba(16, 231, 157, 0.35);
   box-shadow: 0 0 30px -5px rgba(16, 231, 157, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+html.light .glass-panel-hover:hover {
+  border-color: #059669;
+  box-shadow: 0 0 25px -5px rgba(5, 150, 105, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 /* ---------------------------------------------------------------------------
@@ -116,6 +129,39 @@ html.light .bg-grid-cyber {
 .cyber-card-cyan:hover {
   border-color: rgba(6, 182, 212, 0.45);
   box-shadow: 0 0 35px -5px rgba(6, 182, 212, 0.2), inset 0 1px 0 rgba(6, 182, 212, 0.3);
+}
+
+/* Light Mode Cyber Card */
+html.light .cyber-card {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.light .cyber-card:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.04);
+}
+
+html.light .cyber-card-mint:hover {
+  border-color: #059669;
+  box-shadow: 0 8px 30px -4px rgba(5, 150, 105, 0.12), inset 0 1px 0 rgba(5, 150, 105, 0.15);
+}
+
+html.light .cyber-card-iris:hover {
+  border-color: #6366f1;
+  box-shadow: 0 8px 30px -4px rgba(99, 102, 241, 0.12), inset 0 1px 0 rgba(99, 102, 241, 0.15);
+}
+
+html.light .cyber-card-cyan:hover {
+  border-color: #0284c7;
+  box-shadow: 0 8px 30px -4px rgba(2, 132, 199, 0.12), inset 0 1px 0 rgba(2, 132, 199, 0.15);
 }
 
 /* Continuous Marquee Ticker Keyframe */
@@ -193,9 +239,24 @@ html.light body {
   color: #0f172a !important;
 }
 
-/* 1. Surfaces & Background Layers */
-html.light .bg-slate-950 {
+/* 1. Surfaces & Canvas Layers */
+html.light .bg-slate-950,
+html.light .bg-\[\#030712\],
+html.light .bg-\[\#030712\]\/85,
+html.light .bg-\[\#030712\]\/90 {
   background-color: #f8fafc !important;
+}
+
+html.light .bg-\[\#040714\],
+html.light .bg-\[\#050914\],
+html.light .bg-\[\#070c1a\],
+html.light .bg-\[\#070c1a\]\/95 {
+  background-color: #ffffff !important;
+}
+
+html.light .bg-\[\#02050e\],
+html.light .bg-\[\#02050e\]\/95 {
+  background-color: #f1f5f9 !important;
 }
 
 html.light .bg-slate-900,
@@ -223,8 +284,40 @@ html.light .bg-slate-800\/80 {
   background-color: #e2e8f0 !important;
 }
 
+/* Sub-panel, pill & container smudges */
+html.light .bg-black\/20,
+html.light .bg-black\/30,
+html.light .bg-black\/40,
+html.light .bg-black\/50,
+html.light .bg-black\/60,
+html.light .bg-black\/70,
+html.light .bg-black\/75 {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light .bg-white\/\[0\.02\],
+html.light .bg-white\/\[0\.03\],
+html.light .bg-white\/\[0\.04\],
+html.light .bg-white\/\[0\.05\],
+html.light .bg-white\/\[0\.06\],
+html.light .bg-white\/\[0\.07\],
+html.light .bg-white\/\[0\.08\],
+html.light .bg-white\/5,
+html.light .bg-white\/10 {
+  background-color: #f8fafc !important;
+}
+
+/* Hover States */
 html.light .hover\:bg-slate-900:hover,
-html.light .hover\:bg-slate-900\/80:hover {
+html.light .hover\:bg-slate-900\/80:hover,
+html.light .hover\:bg-white\/\[0\.04\]:hover,
+html.light .hover\:bg-white\/\[0\.05\]:hover,
+html.light .hover\:bg-white\/\[0\.06\]:hover,
+html.light .hover\:bg-white\/\[0\.07\]:hover,
+html.light .hover\:bg-white\/\[0\.08\]:hover,
+html.light .hover\:bg-white\/5:hover,
+html.light .hover\:bg-white\/10:hover {
   background-color: #f1f5f9 !important;
 }
 
@@ -256,13 +349,34 @@ html.light .to-slate-950 {
   --tw-gradient-to: #f1f5f9 !important;
 }
 
+/* Hero text gradient fix - render executive deep slate */
+html.light .from-white.via-slate-100.to-slate-300,
+html.light .from-white.via-slate-200.to-slate-400,
+html.light .from-white.to-slate-300,
+html.light .from-white.to-slate-400 {
+  --tw-gradient-from: #0f172a !important;
+  --tw-gradient-stops: #0f172a, #1e293b, #334155 !important;
+  --tw-gradient-to: #334155 !important;
+}
+
 /* 3. Borders & Dividers */
 html.light .border-slate-800,
 html.light .border-slate-800\/40,
 html.light .border-slate-800\/60,
 html.light .border-slate-800\/70,
 html.light .border-slate-800\/80,
-html.light .border-slate-850 {
+html.light .border-slate-850,
+html.light .border-white\/\[0\.04\],
+html.light .border-white\/\[0\.05\],
+html.light .border-white\/\[0\.06\],
+html.light .border-white\/\[0\.08\],
+html.light .border-white\/\[0\.1\],
+html.light .border-white\/\[0\.12\],
+html.light .border-white\/\[0\.15\],
+html.light .border-white\/\[0\.2\],
+html.light .border-white\/5,
+html.light .border-white\/10,
+html.light .border-white\/20 {
   border-color: #e2e8f0 !important;
 }
 
@@ -317,7 +431,81 @@ html.light h3.text-white {
   color: #0f172a !important;
 }
 
-/* 5. PROTECT WHITE TEXT ON COLORED BUTTONS & BADGES */
+/* 5. DUAL-TONE EXECUTIVE BADGES & METRIC PILLS */
+html.light .bg-emerald-500\/10,
+html.light .bg-emerald-500\/15,
+html.light .bg-emerald-500\/20 {
+  background-color: #ecfdf5 !important;
+  color: #047857 !important;
+  border-color: #a7f3d0 !important;
+}
+html.light .text-emerald-400,
+html.light .text-emerald-300 {
+  color: #059669 !important;
+}
+
+html.light .bg-rose-500\/10,
+html.light .bg-rose-500\/15,
+html.light .bg-rose-500\/20 {
+  background-color: #fff1f2 !important;
+  color: #be123c !important;
+  border-color: #fecdd3 !important;
+}
+html.light .text-rose-400,
+html.light .text-rose-300 {
+  color: #e11d48 !important;
+}
+
+html.light .bg-indigo-500\/10,
+html.light .bg-indigo-500\/15,
+html.light .bg-indigo-500\/20 {
+  background-color: #eef2ff !important;
+  color: #4338ca !important;
+  border-color: #c7d2fe !important;
+}
+html.light .text-indigo-400,
+html.light .text-indigo-300 {
+  color: #4f46e5 !important;
+}
+
+html.light .bg-amber-500\/10,
+html.light .bg-amber-500\/15,
+html.light .bg-amber-500\/20 {
+  background-color: #fffbeb !important;
+  color: #b45309 !important;
+  border-color: #fde68a !important;
+}
+html.light .text-amber-400,
+html.light .text-amber-300,
+html.light .text-amber-200 {
+  color: #b45309 !important;
+}
+
+html.light .bg-cyan-500\/10,
+html.light .bg-cyan-500\/15,
+html.light .bg-cyan-500\/20 {
+  background-color: #ecfeff !important;
+  color: #0e7490 !important;
+  border-color: #a5f3fc !important;
+}
+html.light .text-cyan-400,
+html.light .text-cyan-300 {
+  color: #0891b2 !important;
+}
+
+html.light .bg-teal-500\/10,
+html.light .bg-teal-500\/15,
+html.light .bg-teal-500\/20 {
+  background-color: #f0fdfa !important;
+  color: #0f766e !important;
+  border-color: #99f6e4 !important;
+}
+html.light .text-teal-400,
+html.light .text-teal-300 {
+  color: #0d9488 !important;
+}
+
+/* 6. PROTECT WHITE TEXT ON SOLID ACTION BUTTONS ONLY */
 html.light button.bg-emerald-600,
 html.light button.bg-emerald-500,
 html.light button.bg-indigo-600,
@@ -327,14 +515,11 @@ html.light button.bg-rose-500,
 html.light a.bg-emerald-600,
 html.light a.bg-emerald-500,
 html.light a.bg-indigo-600,
-html.light a.bg-indigo-500,
-html.light [class*="bg-gradient-"] *,
-html.light .bg-gradient-to-r *,
-html.light .bg-gradient-to-tr * {
+html.light a.bg-indigo-500 {
   color: #ffffff !important;
 }
 
-/* 6. Form Controls in Light Mode */
+/* 7. Form Controls in Light Mode */
 html.light input,
 html.light select,
 html.light textarea {
@@ -355,14 +540,15 @@ html.light textarea::placeholder {
   color: #94a3b8 !important;
 }
 
-/* 7. Modals, Drawers & Popovers */
+/* 8. Modals, Drawers & Popovers */
 html.light .backdrop-blur-xl,
-html.light .backdrop-blur-md {
+html.light .backdrop-blur-md,
+html.light .backdrop-blur-2xl {
   background-color: rgba(255, 255, 255, 0.95) !important;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
 }
 
-/* 8. Tables in Light Mode */
+/* 9. Tables in Light Mode */
 html.light thead tr {
   background-color: #f1f5f9 !important;
   color: #475569 !important;

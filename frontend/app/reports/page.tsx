@@ -411,7 +411,7 @@ export default function ReportsPage() {
       : "NXF-SHA256-VALIDATED-7F8A92B4C10E");
 
   return (
-    <div className="flex min-h-screen bg-[#030712] text-slate-100 font-sans antialiased">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-slate-100 font-sans antialiased transition-colors duration-150">
       {/* Sidebar hidden during print */}
       <div className="no-print print-hidden print:hidden">
         <Sidebar />

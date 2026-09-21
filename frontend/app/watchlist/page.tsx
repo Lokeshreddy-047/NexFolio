@@ -221,7 +221,7 @@ export default function WatchlistPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#030712] text-slate-100 font-sans antialiased">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-slate-100 font-sans antialiased transition-colors duration-150">
       <Sidebar />
 
       <div className="flex flex-col flex-1 min-w-0">
