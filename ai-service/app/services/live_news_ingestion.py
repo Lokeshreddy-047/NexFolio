@@ -5,7 +5,10 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import List, Dict, Any, Optional, Tuple
 import httpx
-import lxml.etree as ET
+try:
+    import lxml.etree as ET
+except ImportError:
+    from xml.etree import ElementTree as ET
 
 from app.schemas.news import (
     NewsItem,
@@ -379,7 +382,7 @@ class LiveNewsAggregator:
                         continue
 
                     root = ET.fromstring(resp.content)
-                    raw_items = root.xpath("//item")
+                    raw_items = root.xpath("//item") if hasattr(root, "xpath") else root.findall(".//item")
 
                     for raw in raw_items:
                         raw_title = raw.findtext("title") or ""

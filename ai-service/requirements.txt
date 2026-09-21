@@ -14,5 +14,10 @@ pymongo==4.11.1
 motor==3.7.1
 firebase-admin==6.6.0
 httpx>=0.28.0
+lxml>=5.2.0
+requests>=2.31.0
+PyJWT>=2.8.0
+cryptography>=42.0.0
+certifi>=2024.2.2
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
