@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from bson import ObjectId
 from bson.errors import InvalidId
-from app.db.mongodb import get_database
+from app.db.mongodb import get_database, get_db_session
 
 
 def _to_id_query(portfolio_id: str, user_id: str) -> dict:
@@ -77,17 +77,21 @@ async def update_portfolio(portfolio_id: str, user_id: str, update_data: dict) -
 async def delete_portfolio(portfolio_id: str, user_id: str) -> bool:
     try:
         db = get_database()
-        res = await db.portfolios.delete_one(_to_id_query(portfolio_id, user_id))
-        if res.deleted_count > 0:
-            # Cascade delete holdings, transactions, snapshots, predictions, reports, and notifications
-            await db.holdings.delete_many({"portfolio_id": portfolio_id, "user_id": user_id})
-            await db.transactions.delete_many({"portfolio_id": portfolio_id, "user_id": user_id})
-            await db.portfolio_snapshots.delete_many({"portfolio_id": portfolio_id, "user_id": user_id})
-            await db.predictions.delete_many({"portfolio_id": portfolio_id, "user_id": user_id})
-            await db.portfolio_reports.delete_many({"portfolio_id": portfolio_id, "user_id": user_id})
-            await db.notifications.delete_many({"portfolio_id": portfolio_id, "user_id": user_id})
-            return True
-        return False
+        query = _to_id_query(portfolio_id, user_id)
+        async with get_db_session() as session:
+            kwargs = {"session": session} if session else {}
+            res = await db.portfolios.delete_one(query, **kwargs)
+            if res.deleted_count > 0:
+                # Atomic cascade deletion of all child collections
+                cascade_filter = {"portfolio_id": portfolio_id, "user_id": user_id}
+                await db.holdings.delete_many(cascade_filter, **kwargs)
+                await db.transactions.delete_many(cascade_filter, **kwargs)
+                await db.portfolio_snapshots.delete_many(cascade_filter, **kwargs)
+                await db.predictions.delete_many(cascade_filter, **kwargs)
+                await db.portfolio_reports.delete_many(cascade_filter, **kwargs)
+                await db.notifications.delete_many(cascade_filter, **kwargs)
+                return True
+            return False
     except Exception as exc:
         print(f"[portfolio_repository] delete_portfolio warning: {exc}")
         return False

@@ -13,6 +13,7 @@ class Settings(BaseSettings):
         default="http://localhost:3000,http://127.0.0.1:3000,https://nexfolio.vercel.app,https://nexfolio-eta.vercel.app",
         alias="allowed_origins"
     )
+    allowed_origin_regex: str = r"^https://nexfolio(-[a-z0-9-]+)?\.vercel\.app$"
 
     xgboost_model_path: str = "ml/models/xgboost_risk_model.pkl"
     shap_explainer_path: str = "ml/models/shap_explainer.pkl"
@@ -34,6 +35,23 @@ class Settings(BaseSettings):
     upstox_client_secret: str = ""
     upstox_access_token: str = ""
     upstox_feed_url: str = "wss://api.upstox.com/v2/feed/market-data-feed"
+
+    # Multi-Worker Distributed Rate Limiting & Proxy Trust
+    redis_url: str = ""
+    trusted_proxies_raw: str = Field(
+        default="127.0.0.1,::1,localhost,testclient",
+        alias="trusted_proxies"
+    )
+
+    @property
+    def trusted_proxies(self) -> set[str]:
+        proxies = set()
+        for p in self.trusted_proxies_raw.split(","):
+            cleaned = p.strip().lower()
+            if cleaned:
+                proxies.add(cleaned)
+        proxies.update({"127.0.0.1", "::1", "localhost", "testclient"})
+        return proxies
 
     @property
     def allowed_origins(self) -> list[str]:

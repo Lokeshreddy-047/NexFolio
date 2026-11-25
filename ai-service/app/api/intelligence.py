@@ -64,7 +64,7 @@ async def simulate_portfolio_rebalancing_risk(
 
     raw_holdings = await get_holdings_by_portfolio(portfolio_id=portfolio_id, user_id=current_user.uid)
 
-    return simulate_what_if_risk(
+    return await simulate_what_if_risk(
         portfolio_doc=portfolio_doc,
         raw_holdings=raw_holdings,
         request=payload

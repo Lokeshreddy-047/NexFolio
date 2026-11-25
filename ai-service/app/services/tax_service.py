@@ -85,9 +85,19 @@ TAX_RULE_REGISTRY: Dict[str, TaxRuleSet] = {
         surcharge_ceiling_special_rates=0.15,
         cess_rate=0.04,
         loss_carryforward_years=8,
-        statutory_notes="FY 2024-25 under Income-tax Act, 1961."
+        statutory_notes=(
+            "FY 2024-25 under Income-tax Act, 1961. Transfers prior to 23-Jul-2024 taxed at "
+            "STCG 15% / LTCG 10% (>₹1L). Transfers on or after 23-Jul-2024 taxed at "
+            "STCG 20% / LTCG 12.5% (>₹1.25L)."
+        )
     )
 }
+
+# ---------------------------------------------------------------------------
+# Union Budget 2024 Effective Date Cut-off (23-July-2024)
+# ---------------------------------------------------------------------------
+BUDGET_2024_CUTOFF = datetime(2024, 7, 23, tzinfo=timezone.utc)
+
 
 
 def get_tax_rule_set(tax_year_label: Optional[str] = None) -> TaxRuleSet:
@@ -224,7 +234,7 @@ def match_transactions_fifo(
                 realized_pnl = round(sale_proceeds - cost_basis, 2)
                 realized_pnl_pct = round((realized_pnl / cost_basis) * 100, 2) if cost_basis > 0 else 0.0
 
-                # Classification and Base Tax Rate Resolution
+                # Classification and Base Tax Rate Resolution (handling Budget 2024 cut-off)
                 if is_buyback:
                     if promoter_cat == "PROMOTER_DOMESTIC_COMPANY":
                         classification = "BUYBACK_PROMOTER_DOMESTIC"
@@ -233,13 +243,18 @@ def match_transactions_fifo(
                         classification = "BUYBACK_PROMOTER_OTHER"
                         base_tax_rate = active_rule.buyback_promoter_other_rate  # 30%
                     else:
-                        # Non-promoter retail buyback follows capital gains framework
                         classification = "LTCG_112A" if is_long_term else "STCG_111A"
-                        base_tax_rate = active_rule.equity_ltcg_rate if is_long_term else active_rule.equity_stcg_rate
+                        if tx_date < BUDGET_2024_CUTOFF:
+                            base_tax_rate = 0.10 if is_long_term else 0.15
+                        else:
+                            base_tax_rate = active_rule.equity_ltcg_rate if is_long_term else active_rule.equity_stcg_rate
                 else:
                     if realized_pnl >= 0:
                         classification = "LTCG_112A" if is_long_term else "STCG_111A"
-                        base_tax_rate = active_rule.equity_ltcg_rate if is_long_term else active_rule.equity_stcg_rate
+                        if tx_date < BUDGET_2024_CUTOFF:
+                            base_tax_rate = 0.10 if is_long_term else 0.15
+                        else:
+                            base_tax_rate = active_rule.equity_ltcg_rate if is_long_term else active_rule.equity_stcg_rate
                     else:
                         classification = "LTCL" if is_long_term else "STCL"
                         base_tax_rate = 0.0
@@ -277,6 +292,44 @@ def match_transactions_fifo(
                 if earliest_lot["quantity"] <= 1e-6:
                     open_lots[can_sym].popleft()
 
+            # Handle unmatched sell quantity (sales without preceding buy lots)
+            if remaining_sell_qty > 1e-6:
+                unmatched_qty = round(remaining_sell_qty, 4)
+                cost_basis = 0.0
+                sale_proceeds = round(unmatched_qty * price, 2)
+                realized_pnl = sale_proceeds
+                realized_pnl_pct = 100.0
+
+                unmatched_rate = 0.15 if tx_date < BUDGET_2024_CUTOFF else active_rule.equity_stcg_rate
+
+                realized_lots.append(RealizedTradeLot(
+                    lot_id=f"LOT_{lot_counter:04d}",
+                    transaction_id=tx_id,
+                    buy_tx_id=None,
+                    sell_tx_id=tx_id,
+                    symbol=can_sym,
+                    company_name=company,
+                    buy_date=tx_date,
+                    sell_date=tx_date,
+                    holding_period_months=0,
+                    holding_period_days=0,
+                    quantity=unmatched_qty,
+                    buy_price=0.0,
+                    sell_price=price,
+                    cost_basis=cost_basis,
+                    sale_proceeds=sale_proceeds,
+                    realized_pnl=realized_pnl,
+                    realized_pnl_pct=realized_pnl_pct,
+                    is_buyback=is_buyback,
+                    promoter_category=promoter_cat,
+                    classification="UNMATCHED_NO_COST_BASIS",
+                    base_tax_rate=unmatched_rate,
+                    stt_paid=stt_paid,
+                    rule_set_id=active_rule.rule_set_id
+                ))
+                lot_counter += 1
+                remaining_sell_qty = 0.0
+
     return realized_lots, open_lots
 
 
@@ -313,8 +366,20 @@ def compute_capital_gains_schedule(
     buyback_net_gain = 0.0
     buyback_base_tax = 0.0
 
+    unmatched_sell_quantity = 0.0
+    unmatched_sell_proceeds = 0.0
+    audit_warnings: List[str] = []
+
     for lot in filtered_lots:
-        if lot.is_buyback and lot.promoter_category != "NON_PROMOTER":
+        if lot.classification == "UNMATCHED_NO_COST_BASIS":
+            unmatched_sell_quantity += lot.quantity
+            unmatched_sell_proceeds += lot.sale_proceeds
+            audit_warnings.append(
+                f"Audit Warning: {lot.quantity} shares of {lot.symbol} sold on {lot.sell_date.strftime('%Y-%m-%d')} "
+                f"have no preceding BUY records. Treated as full proceeds gain with ₹0 cost basis under Section 111A."
+            )
+            gross_stcg += lot.realized_pnl
+        elif lot.is_buyback and lot.promoter_category != "NON_PROMOTER":
             buyback_proceeds += lot.sale_proceeds
             buyback_cost_basis += lot.cost_basis
             gain = max(0.0, lot.realized_pnl)
@@ -372,9 +437,29 @@ def compute_capital_gains_schedule(
     taxable_112a_ltcg = max(0.0, net_112a_2 - threshold_limit)
     taxable_stcg = net_stcg
 
-    # 5. Base Tax Computation
-    stcg_base_tax = round(taxable_stcg * rule_set.equity_stcg_rate, 2)
-    ltcg_112a_base_tax = round(taxable_112a_ltcg * rule_set.equity_ltcg_rate, 2)
+    # 5. Base Tax Computation (accounting for Budget 2024 transition rates for FY 2024-25)
+    if target_tax_year == "FY 2024-25":
+        pre_stcg = sum(lot.realized_pnl for lot in filtered_lots if lot.classification in ("STCG_111A", "UNMATCHED_NO_COST_BASIS") and lot.sell_date < BUDGET_2024_CUTOFF and lot.realized_pnl > 0)
+        post_stcg = sum(lot.realized_pnl for lot in filtered_lots if lot.classification in ("STCG_111A", "UNMATCHED_NO_COST_BASIS") and lot.sell_date >= BUDGET_2024_CUTOFF and lot.realized_pnl > 0)
+        if taxable_stcg > 0 and (pre_stcg + post_stcg) > 0:
+            pre_prop = pre_stcg / (pre_stcg + post_stcg)
+            post_prop = post_stcg / (pre_stcg + post_stcg)
+            stcg_base_tax = round(taxable_stcg * pre_prop * 0.15 + taxable_stcg * post_prop * 0.20, 2)
+        else:
+            stcg_base_tax = round(taxable_stcg * rule_set.equity_stcg_rate, 2)
+
+        pre_ltcg = sum(lot.realized_pnl for lot in filtered_lots if lot.classification == "LTCG_112A" and lot.sell_date < BUDGET_2024_CUTOFF and lot.realized_pnl > 0)
+        post_ltcg = sum(lot.realized_pnl for lot in filtered_lots if lot.classification == "LTCG_112A" and lot.sell_date >= BUDGET_2024_CUTOFF and lot.realized_pnl > 0)
+        if taxable_112a_ltcg > 0 and (pre_ltcg + post_ltcg) > 0:
+            pre_lt_prop = pre_ltcg / (pre_ltcg + post_ltcg)
+            post_lt_prop = post_ltcg / (pre_ltcg + post_ltcg)
+            ltcg_112a_base_tax = round(taxable_112a_ltcg * pre_lt_prop * 0.10 + taxable_112a_ltcg * post_lt_prop * 0.125, 2)
+        else:
+            ltcg_112a_base_tax = round(taxable_112a_ltcg * rule_set.equity_ltcg_rate, 2)
+    else:
+        stcg_base_tax = round(taxable_stcg * rule_set.equity_stcg_rate, 2)
+        ltcg_112a_base_tax = round(taxable_112a_ltcg * rule_set.equity_ltcg_rate, 2)
+
     total_base_tax = round(stcg_base_tax + ltcg_112a_base_tax + buyback_base_tax, 2)
 
     # 6. Surcharge (15% ceiling for special rate gains) & 4% Health & Education Cess
@@ -418,7 +503,10 @@ def compute_capital_gains_schedule(
         surcharge_amount=surcharge_amount,
         cess_rate=rule_set.cess_rate,
         cess_amount=cess_amount,
-        total_estimated_tax_liability=total_estimated_tax
+        total_estimated_tax_liability=total_estimated_tax,
+        unmatched_sell_quantity=round(unmatched_sell_quantity, 4),
+        unmatched_sell_proceeds=round(unmatched_sell_proceeds, 2),
+        audit_warnings=audit_warnings
     )
 
 
@@ -632,7 +720,10 @@ async def compute_portfolio_tax_report(
         capital_gains=cap_gains,
         tax_loss_bank=tax_loss_bank,
         loss_harvesting=loss_analysis,
-        realized_lots=realized_lots
+        realized_lots=realized_lots,
+        unmatched_sell_quantity=cap_gains.unmatched_sell_quantity,
+        unmatched_sell_proceeds=cap_gains.unmatched_sell_proceeds,
+        audit_warnings=cap_gains.audit_warnings
     )
 
 

@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter
 
 from app.schemas.portfolio_request import PortfolioRequest
@@ -10,4 +11,4 @@ router = APIRouter()
 
 @router.post("/explain-risk", response_model=ExplainabilityResponse, tags=["Explainability"])
 async def explain_risk(payload: PortfolioRequest):
-    return explain_portfolio_risk(payload.model_dump())
+    return await asyncio.to_thread(explain_portfolio_risk, payload.model_dump())

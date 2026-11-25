@@ -294,3 +294,85 @@ def test_endpoint_and_itr_csv_export(client, user1_headers, mock_db, monkeypatch
 
     # Zero ML Invocations Guarantee
     assert ml_invocations == 0, "Tax calculations must NEVER invoke ML prediction models"
+
+
+def test_unmatched_sell_generates_audit_warning_and_stcg():
+    # 50 shares of INFY sold with NO preceding BUY transactions
+    raw_txs = [
+        {
+            "id": "tx_unmatched_1",
+            "symbol": "INFY.NS",
+            "company_name": "Infosys Ltd",
+            "transaction_type": "SELL",
+            "quantity": 50,
+            "price": 1500.0,
+            "transaction_date": datetime(2026, 8, 1, tzinfo=timezone.utc)
+        }
+    ]
+
+    realized_lots, open_lots = match_transactions_fifo(raw_txs)
+    assert len(realized_lots) == 1
+    lot = realized_lots[0]
+    assert lot.classification == "UNMATCHED_NO_COST_BASIS"
+    assert lot.cost_basis == 0.0
+    assert lot.quantity == 50.0
+    assert lot.sale_proceeds == 75000.0
+    assert lot.realized_pnl == 75000.0
+    assert lot.base_tax_rate == 0.20
+
+    sched = compute_capital_gains_schedule(realized_lots=realized_lots, target_tax_year="Tax Year 2026-27")
+    assert sched.unmatched_sell_quantity == 50.0
+    assert sched.unmatched_sell_proceeds == 75000.0
+    assert len(sched.audit_warnings) == 1
+    assert "Audit Warning: 50.0 shares of INFY.NS" in sched.audit_warnings[0]
+    assert sched.gross_stcg == 75000.0
+    assert sched.taxable_stcg == 75000.0
+    assert sched.estimated_stcg_base_tax == 15000.0  # 20% of 75000
+
+
+def test_budget_2024_transition_rates_partition():
+    # FY 2024-25 Budget 2024 transition test:
+    # Lot 1: Sold 15-Jun-2024 (pre-Budget 2024) -> 15% STCG
+    # Lot 2: Sold 15-Aug-2024 (post-Budget 2024) -> 20% STCG
+    raw_txs = [
+        # Pre-budget trade
+        {
+            "id": "b1", "symbol": "TCS.NS", "transaction_type": "BUY",
+            "quantity": 10, "price": 3000.0, "transaction_date": datetime(2024, 5, 1, tzinfo=timezone.utc)
+        },
+        {
+            "id": "s1", "symbol": "TCS.NS", "transaction_type": "SELL",
+            "quantity": 10, "price": 4000.0, "transaction_date": datetime(2024, 6, 15, tzinfo=timezone.utc)
+        },
+        # Post-budget trade
+        {
+            "id": "b2", "symbol": "INFY.NS", "transaction_type": "BUY",
+            "quantity": 10, "price": 1000.0, "transaction_date": datetime(2024, 7, 25, tzinfo=timezone.utc)
+        },
+        {
+            "id": "s2", "symbol": "INFY.NS", "transaction_type": "SELL",
+            "quantity": 10, "price": 2000.0, "transaction_date": datetime(2024, 8, 15, tzinfo=timezone.utc)
+        }
+    ]
+
+    rule_set_2425 = get_tax_rule_set("FY 2024-25")
+    realized_lots, _ = match_transactions_fifo(raw_txs, rule_set=rule_set_2425)
+    assert len(realized_lots) == 2
+
+    # Pre-budget lot (15-Jun-2024)
+    lot_pre = realized_lots[0]
+    assert lot_pre.base_tax_rate == 0.15
+    assert lot_pre.realized_pnl == 10000.0
+
+    # Post-budget lot (15-Aug-2024)
+    lot_post = realized_lots[1]
+    assert lot_post.base_tax_rate == 0.20
+    assert lot_post.realized_pnl == 10000.0
+
+    # Compute Schedule for FY 2024-25
+    sched = compute_capital_gains_schedule(realized_lots=realized_lots, target_tax_year="FY 2024-25")
+    # Pre-budget tax = 10000 * 0.15 = 1500
+    # Post-budget tax = 10000 * 0.20 = 2000
+    # Total STCG base tax = 3500.0
+    assert sched.estimated_stcg_base_tax == 3500.0
+    assert sched.total_base_tax == 3500.0

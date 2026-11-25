@@ -1,3 +1,4 @@
+import asyncio
 import time
 from datetime import datetime, timezone
 from typing import List, Dict, Tuple, Optional
@@ -307,9 +308,11 @@ async def generate_portfolio_intelligence(
     _, sector_alloc = compute_allocations(holdings, curr_val)
     features = derive_institutional_features(holdings, invested, curr_val)
 
-    # 3. Model Prediction & SHAP Explanations
-    prediction = predict_portfolio_risk(features)
-    raw_shap = explain_portfolio_risk(features)
+    # 3. Model Prediction & SHAP Explanations (Offloaded to threadpool)
+    prediction, raw_shap = await asyncio.gather(
+        asyncio.to_thread(predict_portfolio_risk, features),
+        asyncio.to_thread(explain_portfolio_risk, features)
+    )
     mitigators, amplifiers = translate_shap_drivers(raw_shap, features)
 
     # 4. Health Scorecard & Traceable Recommendations
@@ -387,7 +390,7 @@ async def generate_portfolio_intelligence(
     return response
 
 
-def simulate_what_if_risk(
+async def simulate_what_if_risk(
     portfolio_doc: dict,
     raw_holdings: list,
     request: WhatIfSimulationRequest
@@ -415,7 +418,7 @@ def simulate_what_if_risk(
     # 2. Current Baseline
     holdings, invested, curr_val, _, _ = compute_holdings_metrics(raw_holdings)
     current_features = derive_institutional_features(holdings, invested, curr_val)
-    current_pred = predict_portfolio_risk(current_features)
+    current_pred = await asyncio.to_thread(predict_portfolio_risk, current_features)
     current_health = calculate_health_score(current_features)
 
     # 3. Derive Simulated Feature Vector
@@ -458,8 +461,10 @@ def simulate_what_if_risk(
         "return_1Y": sim_ret
     }
 
-    sim_pred = predict_portfolio_risk(sim_features)
-    sim_shap = explain_portfolio_risk(sim_features)
+    sim_pred, sim_shap = await asyncio.gather(
+        asyncio.to_thread(predict_portfolio_risk, sim_features),
+        asyncio.to_thread(explain_portfolio_risk, sim_features)
+    )
     sim_mitigators, sim_amplifiers = translate_shap_drivers(sim_shap, sim_features)
     sim_health = calculate_health_score(sim_features)
 
@@ -547,7 +552,7 @@ async def compute_portfolio_rebalance_plan(
     holdings, invested, curr_val, _, _ = compute_holdings_metrics(raw_holdings, quotes=live_quotes)
     features = derive_institutional_features(holdings, invested, curr_val)
     current_health_score = calculate_health_score(features)
-    current_prediction = predict_portfolio_risk(features)
+    current_prediction = await asyncio.to_thread(predict_portfolio_risk, features)
     current_risk_category = current_prediction["risk_category"]
 
     total_val = curr_val if curr_val > 0 else 1.0

@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, timedelta
-from typing import List, Optional
+from typing import List, Optional, Any
 from bson import ObjectId
 from app.db.mongodb import get_database
 
@@ -8,7 +8,8 @@ async def record_snapshot(
     user_id: str,
     portfolio_id: str,
     data: dict,
-    force_new: bool = False
+    force_new: bool = False,
+    session: Optional[Any] = None
 ) -> dict:
     """
     Records a valuation snapshot.
@@ -26,6 +27,7 @@ async def record_snapshot(
     roi_pct = round(float(data.get("total_roi_pct", (total_pnl / invested * 100.0) if invested > 0 else 0.0)), 2)
 
     db = get_database()
+    kwargs = {"session": session} if session else {}
 
     if not force_new:
         recent_cutoff = now - timedelta(minutes=30)
@@ -33,7 +35,7 @@ async def record_snapshot(
             "user_id": user_id,
             "portfolio_id": portfolio_id,
             "timestamp": {"$gte": recent_cutoff}
-        })
+        }, **kwargs)
 
         if existing:
             await db.portfolio_snapshots.update_one(
@@ -45,7 +47,8 @@ async def record_snapshot(
                     "total_pnl": total_pnl,
                     "total_roi_pct": roi_pct,
                     "timestamp": now,
-                }}
+                }},
+                **kwargs
             )
             existing["total_value"] = total_val
             existing["invested_capital"] = invested
@@ -67,7 +70,7 @@ async def record_snapshot(
         "timestamp": now,
     }
 
-    res = await db.portfolio_snapshots.insert_one(document)
+    res = await db.portfolio_snapshots.insert_one(document, **kwargs)
     document["_id"] = str(res.inserted_id)
     return document
 

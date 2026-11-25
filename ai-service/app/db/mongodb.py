@@ -1,5 +1,6 @@
 import os
 import certifi
+from contextlib import asynccontextmanager
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 
@@ -10,6 +11,58 @@ DATABASE_NAME = os.getenv("MONGODB_DATABASE") or os.getenv("MONGODB_DB_NAME") or
 
 _client = None
 _database = None
+
+
+def get_client():
+    global _client, _database
+    if _client is not None:
+        return _client
+    if _database is not None and hasattr(_database, "client"):
+        return _database.client
+    get_database()
+    return _client
+
+
+@asynccontextmanager
+async def get_db_session():
+    """
+    Yields an active database session for atomic multi-document operations.
+    If the deployment is standalone, in-memory mock, or doesn't support transactions,
+    it falls back gracefully to yielding None so single operations proceed normally.
+    """
+    client = get_client()
+    if client is None or not hasattr(client, "start_session"):
+        yield None
+        return
+
+    try:
+        session = await client.start_session()
+    except Exception as exc:
+        yield None
+        return
+
+    tx_active = False
+    try:
+        try:
+            tx_cm = session.start_transaction()
+            if hasattr(tx_cm, "__aenter__"):
+                async with tx_cm:
+                    tx_active = True
+                    yield session
+            else:
+                tx_active = True
+                yield session
+        except Exception:
+            if not tx_active:
+                yield None
+            else:
+                raise
+    finally:
+        try:
+            if hasattr(session, "end_session"):
+                await session.end_session()
+        except Exception:
+            pass
 
 
 def get_database():

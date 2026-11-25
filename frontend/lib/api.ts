@@ -19,7 +19,7 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
         headers["Authorization"] = `Bearer ${token}`;
       }
     } else if (typeof window !== "undefined") {
-      const devToken = localStorage.getItem("nexfolio_dev_token") || "mock_token_demo_institutional_user";
+      const devToken = localStorage.getItem("nexfolio_dev_token") || process.env.NEXT_PUBLIC_DEV_AUTH_TOKEN;
       if (devToken) {
         headers["Authorization"] = `Bearer ${devToken}`;
       }
@@ -1539,4 +1539,4 @@ export async function getCrisisStressTest(
 
 export async function getCrisisScenarios(): Promise<CrisisScenarioInfo[]> {
   return apiRequest<CrisisScenarioInfo[]>(`/api/v1/stress-test/scenarios`);
-}
+}

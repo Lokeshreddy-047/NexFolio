@@ -75,7 +75,7 @@ class RealizedTradeLot(BaseModel):
     promoter_category: str = "NON_PROMOTER"  # NON_PROMOTER, PROMOTER_DOMESTIC_COMPANY, PROMOTER_OTHER
     classification: str = Field(
         ...,
-        description="'STCG_111A', 'LTCG_112A', 'LTCG_OTHER', 'STCL', 'LTCL', 'BUYBACK_PROMOTER_DOMESTIC', 'BUYBACK_PROMOTER_OTHER'"
+        description="'STCG_111A', 'LTCG_112A', 'LTCG_OTHER', 'STCL', 'LTCL', 'BUYBACK_PROMOTER_DOMESTIC', 'BUYBACK_PROMOTER_OTHER', 'UNMATCHED_NO_COST_BASIS'"
     )
     base_tax_rate: float
     stt_paid: float = 0.0
@@ -127,6 +127,11 @@ class CapitalGainsSchedule(BaseModel):
     cess_amount: float = 0.0
     total_estimated_tax_liability: float = 0.0
 
+    # Unmatched Sell Reconciliation
+    unmatched_sell_quantity: float = 0.0
+    unmatched_sell_proceeds: float = 0.0
+    audit_warnings: List[str] = Field(default_factory=list)
+
 
 class TaxLossHarvestingCandidate(BaseModel):
     holding_id: Optional[str] = None
@@ -170,6 +175,9 @@ class TaxReportResponse(BaseModel):
     tax_loss_bank: TaxLossBank
     loss_harvesting: TaxLossHarvestingAnalysis
     realized_lots: List[RealizedTradeLot]
+    unmatched_sell_quantity: float = 0.0
+    unmatched_sell_proceeds: float = 0.0
+    audit_warnings: List[str] = Field(default_factory=list)
     disclaimer: str = (
         "NexFolio provides quantitative estimation and loss harvesting optimization based on "
         "your investment ledger and live market quotes. Computation strictly follows the "

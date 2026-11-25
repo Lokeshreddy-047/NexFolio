@@ -412,3 +412,36 @@ async def test_portfolio_rebalance_plan_endpoint(mock_db):
         assert data["projected_health_score"] >= data["current_health_score"]
 
 
+from datetime import datetime, timezone
+
+
+def test_empirical_metrics_grounding():
+    from app.services.portfolio_analytics_service import derive_institutional_features
+    from app.schemas.holding import HoldingResponse
+
+    # Single holding: RELIANCE (empirical beta ~ 0.6309, vol ~ 0.2041)
+    holdings = [
+        HoldingResponse(
+            id="h_rel",
+            portfolio_id="port_test",
+            user_id="user_test",
+            symbol="RELIANCE.NS",
+            company_name="Reliance Industries",
+            asset_type="Equity",
+            sector="Oil & Gas",
+            quantity=10,
+            avg_buy_price=2500.0,
+            current_price=2500.0,
+            invested_value=25000.0,
+            current_value=25000.0,
+            unrealized_pnl=0.0,
+            unrealized_pnl_pct=0.0,
+            weight=100.0,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
+        )
+    ]
+    features = derive_institutional_features(holdings, total_invested=25000.0, total_current_value=25000.0)
+    # Check that empirical beta and volatility are grounded in parquet/json metrics (not static 1.15)
+    assert 0.60 <= features["portfolio_beta"] <= 0.66
+    assert 0.18 <= features["annualized_volatility"] <= 0.23

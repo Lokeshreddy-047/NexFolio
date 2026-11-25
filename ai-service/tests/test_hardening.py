@@ -71,3 +71,91 @@ async def test_rate_limiting_enforcement():
         remaining = int(last_resp.headers["X-RateLimit-Remaining"])
         assert remaining <= 290
         assert int(last_resp.headers["X-RateLimit-Limit"]) == 300
+
+
+@pytest.mark.asyncio
+async def test_cors_scoped_vercel_origins():
+    """
+    Verifies that CORS correctly allows verified NexFolio Vercel subdomains
+    while rejecting rogue/arbitrary Vercel deployments and unauthorized origins.
+    """
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Legitimate production Vercel app
+        res_prod = await client.options(
+            "/api/v1/health",
+            headers={
+                "Origin": "https://nexfolio.vercel.app",
+                "Access-Control-Request-Method": "GET"
+            }
+        )
+        assert res_prod.status_code == 200
+        assert res_prod.headers.get("access-control-allow-origin") == "https://nexfolio.vercel.app"
+
+        # 2. Legitimate branch preview Vercel app
+        res_preview = await client.options(
+            "/api/v1/health",
+            headers={
+                "Origin": "https://nexfolio-eta.vercel.app",
+                "Access-Control-Request-Method": "GET"
+            }
+        )
+        assert res_preview.status_code == 200
+        assert res_preview.headers.get("access-control-allow-origin") == "https://nexfolio-eta.vercel.app"
+
+        # 3. Rogue third-party Vercel app (MUST BE REJECTED)
+        res_rogue = await client.options(
+            "/api/v1/health",
+            headers={
+                "Origin": "https://malicious-attacker.vercel.app",
+                "Access-Control-Request-Method": "GET"
+            }
+        )
+        assert res_rogue.headers.get("access-control-allow-origin") != "https://malicious-attacker.vercel.app"
+        assert res_rogue.headers.get("access-control-allow-origin") != "*"
+
+        # 4. Completely unauthorized external origin (MUST BE REJECTED)
+        res_evil = await client.options(
+            "/api/v1/health",
+            headers={
+                "Origin": "https://evil-attacker.com",
+                "Access-Control-Request-Method": "GET"
+            }
+        )
+        assert res_evil.headers.get("access-control-allow-origin") != "https://evil-attacker.com"
+        assert res_evil.headers.get("access-control-allow-origin") != "*"
+
+
+@pytest.mark.asyncio
+async def test_trusted_proxy_and_spoofed_forwarded_for_extraction():
+    """
+    Verifies that X-Forwarded-For is only trusted from authorized reverse proxies,
+    and cannot be spoofed by untrusted direct connections to evade rate limits.
+    """
+    from starlette.requests import Request
+    from app.middleware.rate_limit import SlidingWindowRateLimiter
+    from app.config.settings import settings
+
+    limiter = SlidingWindowRateLimiter(app=None)
+
+    # 1. Untrusted client IP with spoofed X-Forwarded-For
+    scope_untrusted = {
+        "type": "http",
+        "client": ("203.0.113.195", 12345),
+        "headers": [(b"x-forwarded-for", b"198.51.100.1")]
+    }
+    req_untrusted = Request(scope_untrusted)
+    client_key_untrusted = limiter._get_client_key(req_untrusted)
+    # Must use actual client IP 203.0.113.195, NOT the spoofed 198.51.100.1
+    assert client_key_untrusted == "ip:203.0.113.195"
+
+    # 2. Trusted proxy (e.g. 127.0.0.1) forwarding legitimate client IP
+    scope_trusted = {
+        "type": "http",
+        "client": ("127.0.0.1", 80),
+        "headers": [(b"x-forwarded-for", b"198.51.100.1, 10.0.0.1")]
+    }
+    req_trusted = Request(scope_trusted)
+    client_key_trusted = limiter._get_client_key(req_trusted)
+    # Extracts the first IP in the chain from trusted reverse proxy
+    assert client_key_trusted == "ip:198.51.100.1"

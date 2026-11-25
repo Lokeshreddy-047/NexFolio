@@ -2,7 +2,7 @@ import os
 import json
 import time
 from typing import Optional, Dict
-import requests
+import httpx
 import jwt
 from cryptography.x509 import load_pem_x509_certificate
 from fastapi import HTTPException, status
@@ -15,18 +15,55 @@ _certs_cache: Dict[str, str] = {}
 _certs_expiry: float = 0.0
 
 
+def _parse_max_age(headers: httpx.Headers, default: int = 3600) -> int:
+    cache_control = headers.get("Cache-Control", "")
+    if "max-age=" in cache_control:
+        try:
+            part = cache_control.split("max-age=")[1].split(",")[0].strip()
+            return int(part)
+        except Exception:
+            return default
+    return default
+
+
+async def warmup_google_certs() -> Dict[str, str]:
+    """
+    Asynchronously pre-fetches and caches Google public x509 PKI certificates during application startup.
+    Eliminates first-request authentication latency spikes.
+    """
+    global _certs_cache, _certs_expiry
+    now = time.time()
+    try:
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            res = await client.get(GOOGLE_CERTS_URL)
+            if res.status_code == 200:
+                _certs_cache = res.json()
+                max_age = _parse_max_age(res.headers, default=3600)
+                _certs_expiry = now + max_age
+                return _certs_cache
+    except Exception as exc:
+        print(f"[Firebase Auth] Startup warmup for Google public certs warning: {exc}")
+    return _certs_cache
+
+
 def _fetch_google_public_certs(force_refresh: bool = False) -> Dict[str, str]:
+    """
+    Synchronous fallback accessor for Google public certificates.
+    Uses cached certs if valid; falls back to an HTTPX client request if expired or forced.
+    """
     global _certs_cache, _certs_expiry
     now = time.time()
     if not force_refresh and _certs_cache and now < _certs_expiry:
         return _certs_cache
 
     try:
-        res = requests.get(GOOGLE_CERTS_URL, timeout=5)
-        if res.status_code == 200:
-            _certs_cache = res.json()
-            _certs_expiry = now + 3600
-            return _certs_cache
+        with httpx.Client(timeout=5.0) as client:
+            res = client.get(GOOGLE_CERTS_URL)
+            if res.status_code == 200:
+                _certs_cache = res.json()
+                max_age = _parse_max_age(res.headers, default=3600)
+                _certs_expiry = now + max_age
+                return _certs_cache
     except Exception as exc:
         print(f"[Firebase Auth] Failed to fetch Google public certs: {exc}")
 

@@ -1,3 +1,6 @@
+import json
+import math
+from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Any
 from app.schemas.portfolio import (
     PortfolioSummary,
@@ -12,6 +15,23 @@ from app.services.prediction_service import predict_portfolio_risk
 from app.services.explainability_service import explain_portfolio_risk
 from app.api.recommendations import generate_recommendations
 from app.services.market_data.symbol_normalizer import SymbolNormalizer
+
+_STOCK_RISK_METRICS = None
+
+def get_stock_risk_metrics() -> Dict[str, dict]:
+    global _STOCK_RISK_METRICS
+    if _STOCK_RISK_METRICS is None:
+        try:
+            json_path = Path(__file__).resolve().parent.parent / "data" / "stock_risk_metrics.json"
+            if json_path.exists():
+                with open(json_path, "r", encoding="utf-8") as f:
+                    _STOCK_RISK_METRICS = json.load(f)
+            else:
+                _STOCK_RISK_METRICS = {}
+        except Exception as exc:
+            print(f"[portfolio_analytics_service] Warning loading stock_risk_metrics: {exc}")
+            _STOCK_RISK_METRICS = {}
+    return _STOCK_RISK_METRICS
 
 
 def compute_holdings_metrics(
@@ -205,7 +225,8 @@ ALL_SECTOR_FEATURES = [
 
 def derive_institutional_features(holdings: List[HoldingResponse], total_invested: float, total_current_value: float) -> Dict[str, float]:
     """
-    Derives quantitative financial risk metrics from holdings for ML risk prediction.
+    Derives quantitative financial risk metrics grounded in empirical 252-day NSE stock data
+    from the parquet feature store / JSON metrics cache.
     Populates all 36 features expected by the institutional XGBoost risk classifier.
     """
     asset_count = len(holdings)
@@ -217,24 +238,80 @@ def derive_institutional_features(holdings: List[HoldingResponse], total_investe
         hhi = sum((h.current_value / total_current_value) ** 2 for h in holdings)
         diversification_score = max(10.0, min(100.0, (1.0 - hhi) * 100.0 + min(asset_count * 2.0, 20.0)))
     else:
+        hhi = 1.0
         diversification_score = 50.0
 
-    # Asset weights
-    equity_weight = sum(h.weight for h in holdings if h.asset_type == "Equity") / 100.0
-    crypto_weight = sum(h.weight for h in holdings if h.asset_type == "Crypto") / 100.0
-    debt_weight = sum(h.weight for h in holdings if h.asset_type == "Debt") / 100.0
+    stock_metrics = get_stock_risk_metrics()
 
-    # Risk approximations grounded in portfolio composition
-    annualized_volatility = max(0.08, min(0.65, 0.12 + equity_weight * 0.14 + crypto_weight * 0.40 - debt_weight * 0.06))
-    portfolio_beta = max(0.40, min(2.50, 0.70 + equity_weight * 0.45 + crypto_weight * 1.20 - debt_weight * 0.30))
+    # Asset class proxy fallbacks when empirical stock metrics are unavailable
+    ASSET_DEFAULTS = {
+        "Equity": {"beta": 1.05, "volatility": 0.22, "downside_deviation": 0.012, "return_252d": 0.12, "mdd_pct": -0.22},
+        "Debt": {"beta": 0.10, "volatility": 0.05, "downside_deviation": 0.003, "return_252d": 0.07, "mdd_pct": -0.04},
+        "Crypto": {"beta": 1.85, "volatility": 0.65, "downside_deviation": 0.035, "return_252d": 0.25, "mdd_pct": -0.55},
+        "Commodity": {"beta": 0.30, "volatility": 0.15, "downside_deviation": 0.008, "return_252d": 0.10, "mdd_pct": -0.15},
+    }
+    DEFAULT_FALLBACK = {"beta": 1.0, "volatility": 0.20, "downside_deviation": 0.010, "return_252d": 0.10, "mdd_pct": -0.20}
 
-    unrealized_roi = ((total_current_value - total_invested) / total_invested) if total_invested > 0 else 0.12
-    annualized_return = max(-0.40, min(1.50, 0.08 + unrealized_roi * 0.5 + equity_weight * 0.06 + crypto_weight * 0.15))
+    # Aggregate empirical or proxy metrics across holdings weighted by portfolio allocation
+    weighted_beta = 0.0
+    weighted_volatility = 0.0
+    weighted_return = 0.0
+    weighted_mdd = 0.0
+    weighted_downside_dev = 0.0
+
+    if holdings and total_current_value > 0:
+        for h in holdings:
+            w_i = (h.current_value / total_current_value)
+            sym = (h.symbol or "").upper().strip()
+            # Lookup canonical symbol or with .NS suffix
+            sym_key = None
+            for candidate in (sym, f"{sym}.NS", sym.replace(".NS", ""), SymbolNormalizer.to_canonical(sym)):
+                if candidate in stock_metrics:
+                    sym_key = candidate
+                    break
+
+            if sym_key:
+                m = stock_metrics[sym_key]
+                b_i = float(m.get("beta", 1.0))
+                v_i = float(m.get("volatility", 0.22))
+                r_i = float(m.get("return_252d", 0.12))
+                mdd_i = float(m.get("mdd_pct", -0.25))
+                dd_i = float(m.get("downside_deviation", 0.012))
+            else:
+                fallback = ASSET_DEFAULTS.get(h.asset_type, DEFAULT_FALLBACK)
+                b_i = fallback["beta"]
+                v_i = fallback["volatility"]
+                r_i = fallback["return_252d"]
+                mdd_i = fallback["mdd_pct"]
+                dd_i = fallback["downside_deviation"]
+
+            weighted_beta += w_i * b_i
+            weighted_volatility += w_i * v_i
+            weighted_return += w_i * r_i
+            weighted_mdd += w_i * mdd_i
+            weighted_downside_dev += w_i * dd_i
+    else:
+        # Fallback values for empty portfolio
+        weighted_beta = 1.0
+        weighted_volatility = 0.18
+        weighted_return = 0.12
+        weighted_mdd = -0.15
+        weighted_downside_dev = 0.010
+
+    # Scale portfolio volatility by diversification factor: concentrated -> full vol, diversified -> sqrt(0.35 + 0.65 * HHI)
+    diversified_volatility = weighted_volatility * math.sqrt(0.35 + 0.65 * hhi)
+    annualized_volatility = max(0.08, min(0.65, diversified_volatility))
+    portfolio_beta = max(0.40, min(2.50, weighted_beta))
+
+    unrealized_roi = ((total_current_value - total_invested) / total_invested) if total_invested > 0 else weighted_return
+    annualized_return = max(-0.40, min(1.50, 0.60 * weighted_return + 0.40 * unrealized_roi))
 
     rf_rate = 0.06
     portfolio_sharpe_ratio = max(-2.0, min(4.0, (annualized_return - rf_rate) / annualized_volatility if annualized_volatility > 0 else 0.5))
-    portfolio_sortino_ratio = max(-2.0, min(5.0, portfolio_sharpe_ratio * 1.25))
-    portfolio_max_drawdown = max(-0.80, min(-0.02, -(0.05 + annualized_volatility * 0.6)))
+    portfolio_max_drawdown = max(-0.80, min(-0.02, weighted_mdd * (0.80 + 0.20 * math.sqrt(hhi))))
+    
+    annualized_downside_dev = max(0.02, min(0.45, weighted_downside_dev * math.sqrt(252) * math.sqrt(0.35 + 0.65 * hhi)))
+    portfolio_sortino_ratio = max(-2.0, min(5.0, (annualized_return - rf_rate) / annualized_downside_dev if annualized_downside_dev > 0 else portfolio_sharpe_ratio * 1.25))
     portfolio_calmar_ratio = max(-2.0, min(4.0, annualized_return / abs(portfolio_max_drawdown) if portfolio_max_drawdown != 0 else 1.0))
 
     # Calculate 18 sector percentages
@@ -257,7 +334,7 @@ def derive_institutional_features(holdings: List[HoldingResponse], total_investe
     total_return = round(unrealized_roi, 4)
     rolling_max_drawdown_30d = round(portfolio_max_drawdown * 0.88, 4)
     rolling_max_drawdown_252d = round(portfolio_max_drawdown, 4)
-    downside_deviation_annualized = round(annualized_volatility * 0.70, 4)
+    downside_deviation_annualized = round(annualized_downside_dev, 4)
 
     return {
         "trading_days": trading_days,

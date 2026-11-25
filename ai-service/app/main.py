@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config.settings import settings
 from app.db.mongodb import ensure_db_indexes
+from app.services.firebase_auth import warmup_google_certs
 from app.api.health import router as health_router
 
 from app.api.risk import router as risk_router
@@ -31,8 +32,9 @@ from app.middleware.error_handler import register_exception_handlers
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: ensure compound database indexes
+    # Startup: ensure compound database indexes & warmup Google PKI certs
     await ensure_db_indexes()
+    await warmup_google_certs()
     yield
 
 
@@ -53,11 +55,11 @@ app.add_middleware(
     ml_limit_per_minute=60
 )
 
-# 3. Cross-Origin Resource Sharing (CORS)
+# 3. Cross-Origin Resource Sharing (CORS) - Strict Origin & Scoped Vercel Regex
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins if settings.allowed_origins != ["*"] else ["*"],
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origins=settings.allowed_origins,
+    allow_origin_regex=settings.allowed_origin_regex,
     allow_credentials=True if settings.allowed_origins != ["*"] else False,
     allow_methods=["*"],
     allow_headers=["*"],

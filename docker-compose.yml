@@ -7,15 +7,17 @@ services:
     container_name: nexfolio-mongodb
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     environment:
       - MONGO_INITDB_DATABASE=nexfolio
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME:-nexfolio_admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD:-change_me_in_production}
     volumes:
       - mongo_data:/data/db
     networks:
       - nexfolio-network
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD-SHELL", "mongosh -u ${MONGO_INITDB_ROOT_USERNAME:-nexfolio_admin} -p ${MONGO_INITDB_ROOT_PASSWORD:-change_me_in_production} --authenticationDatabase admin --eval 'db.adminCommand(\"ping\")' || mongosh --eval 'db.adminCommand(\"ping\")'"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -34,7 +36,7 @@ services:
       - "8000:8000"
     environment:
       - ENVIRONMENT=production
-      - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017}
+      - MONGODB_URI=${MONGODB_URI:-mongodb://${MONGO_INITDB_ROOT_USERNAME:-nexfolio_admin}:${MONGO_INITDB_ROOT_PASSWORD:-change_me_in_production}@mongodb:27017/?authSource=admin}
       - MONGODB_DATABASE=${MONGODB_DATABASE:-${DATABASE_NAME:-nexfolio}}
       - MONGODB_DB_NAME=${MONGODB_DATABASE:-${DATABASE_NAME:-nexfolio}}
       - ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost

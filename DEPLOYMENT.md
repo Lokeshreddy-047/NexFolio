@@ -103,6 +103,24 @@ The backend automatically injects enterprise security headers on every response:
 - Standard API endpoints: **300 requests / minute**.
 - Heavy ML Inference & Report Generation (`/intelligence`, `/explain`, `/report`): **60 requests / minute**.
 - Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `Retry-After` headers.
+- Supports distributed Redis sliding window with automatic in-memory fallback.
+- Client IP resolution is secured against spoofed `X-Forwarded-For` headers via trusted proxy enforcement (`TRUSTED_PROXIES`).
+
+### 4. Database Security & Localhost Network Isolation
+- In `docker-compose.yml`, MongoDB is bound strictly to `127.0.0.1:27017` to prevent accidental public exposure to external network interfaces.
+- Containerized MongoDB initialization includes mandatory root authentication credentials (`MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`).
+- FastApi connects through an authenticated connection URI with `?authSource=admin`.
+
+### 5. Production Sizing & Memory Guidelines (XGBoost + SHAP TreeExplainer)
+Machine learning operations (XGBoost risk scoring, SHAP TreeExplainer matrix calculations, and 28-feature transformations) require specialized memory considerations:
+- **Minimum RAM:** 1 GB (Render `starter` plan, AWS Fargate 0.5 vCPU / 1 GB RAM, or GCP Cloud Run 1 GiB).
+- **Free Tier Warning:** Render `free` tier (512 MB RAM) is prone to Out-Of-Memory (OOM) process termination (`SIGKILL 137`) during concurrent TreeSHAP background evaluations.
+- **glibc Memory Reclaim:** On Linux containers, glibc retains freed heap allocations in arenas by default. Configure the following environment variables in `render.yaml` or container definitions to force immediate memory deallocation back to the OS:
+  ```env
+  MALLOC_TRIM_THRESHOLD_=100000
+  PYTHONMALLOC=malloc
+  ```
+- **Threadpool Offloading:** Compute-heavy inferences run non-blockingly on worker threads via `asyncio.to_thread` to maintain high event loop responsiveness for health checks and concurrent transactions.
 
 ---
 
@@ -135,14 +153,17 @@ The backend automatically injects enterprise security headers on every response:
 ---
 
 ## 5. Automated Verification & Testing
-To run the automated validation suite locally:
+To run the full automated validation suite locally:
 ```bash
-# AI Service unit & integration tests (33 tests)
+# AI Service unit & integration tests (111 tests across 24 test suites)
 cd ai-service
 pytest -v
 
-# Frontend linting & build validation
+# Frontend unit tests (Vitest: financial math, tax law, formatters)
 cd ../frontend
+npm test
+
+# Frontend linting & production build validation
 npm run lint
 npm run build
 ```

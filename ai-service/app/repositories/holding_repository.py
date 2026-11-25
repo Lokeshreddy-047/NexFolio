@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Any
 from bson import ObjectId
 from bson.errors import InvalidId
 
@@ -39,7 +39,7 @@ async def get_holding_by_id_and_user(holding_id: str, user_id: str) -> Optional[
         return None
 
 
-async def create_direct_holding(user_id: str, data: dict) -> dict:
+async def create_direct_holding(user_id: str, data: dict, session: Optional[Any] = None) -> dict:
     now = datetime.now(timezone.utc)
     symbol = data.get("symbol", "").upper().strip()
     stock_meta = get_stock_info(symbol)
@@ -64,12 +64,13 @@ async def create_direct_holding(user_id: str, data: dict) -> dict:
     }
 
     db = get_database()
+    kwargs = {"session": session} if session else {}
     # If holding for this symbol already exists in portfolio, update it
     existing = await db.holdings.find_one({
         "portfolio_id": data.get("portfolio_id"),
         "user_id": user_id,
         "symbol": stock_meta["symbol"]
-    })
+    }, **kwargs)
 
     if existing:
         old_qty = float(existing.get("quantity", 0.0))
@@ -84,7 +85,8 @@ async def create_direct_holding(user_id: str, data: dict) -> dict:
                 "avg_buy_price": round(new_avg, 2),
                 "current_price": curr_price,
                 "updated_at": now,
-            }}
+            }},
+            **kwargs
         )
         existing["quantity"] = new_qty
         existing["avg_buy_price"] = round(new_avg, 2)
@@ -92,7 +94,7 @@ async def create_direct_holding(user_id: str, data: dict) -> dict:
         existing["_id"] = str(existing["_id"])
         return existing
 
-    result = await db.holdings.insert_one(document)
+    result = await db.holdings.insert_one(document, **kwargs)
     document["_id"] = str(result.inserted_id)
     return document
 
@@ -134,7 +136,8 @@ async def apply_buy_transaction(
     price: float,
     asset_type: Optional[str] = None,
     sector: Optional[str] = None,
-    company_name: Optional[str] = None
+    company_name: Optional[str] = None,
+    session: Optional[Any] = None
 ) -> dict:
     stock_meta = get_stock_info(symbol)
     resolved_symbol = stock_meta["symbol"]
@@ -153,7 +156,8 @@ async def apply_buy_transaction(
             "quantity": quantity,
             "buy_price": price,
             "current_price": price,
-        }
+        },
+        session=session
     )
 
 
@@ -162,7 +166,8 @@ async def apply_sell_transaction(
     portfolio_id: str,
     symbol: str,
     quantity: float,
-    price: float
+    price: float,
+    session: Optional[Any] = None
 ) -> Tuple[Optional[dict], float]:
     """
     Applies a SELL transaction to existing holding:
@@ -172,12 +177,13 @@ async def apply_sell_transaction(
     resolved_symbol = stock_meta["symbol"]
     now = datetime.now(timezone.utc)
     db = get_database()
+    kwargs = {"session": session} if session else {}
 
     existing = await db.holdings.find_one({
         "portfolio_id": portfolio_id,
         "user_id": user_id,
         "symbol": resolved_symbol
-    })
+    }, **kwargs)
 
     if not existing:
         return None, 0.0
@@ -192,11 +198,12 @@ async def apply_sell_transaction(
     # Record realized P&L onto the portfolio
     await db.portfolios.update_one(
         _to_id_query(portfolio_id, user_id),
-        {"$inc": {"realized_pnl": round(realized_pnl, 2)}}
+        {"$inc": {"realized_pnl": round(realized_pnl, 2)}},
+        **kwargs
     )
 
     if remaining_qty <= 0:
-        await db.holdings.delete_one({"_id": existing["_id"]})
+        await db.holdings.delete_one({"_id": existing["_id"]}, **kwargs)
         return None, realized_pnl
     else:
         await db.holdings.update_one(
@@ -205,7 +212,8 @@ async def apply_sell_transaction(
                 "quantity": remaining_qty,
                 "current_price": price,
                 "updated_at": now
-            }}
+            }},
+            **kwargs
         )
         existing["quantity"] = remaining_qty
         existing["current_price"] = price

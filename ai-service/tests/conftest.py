@@ -58,6 +58,35 @@ class MockInsertResult:
         self.inserted_id = inserted_id
 
 
+class MockSession:
+    def __init__(self):
+        self.in_transaction = False
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.in_transaction = False
+
+    def start_transaction(self):
+        self.in_transaction = True
+        return self
+
+    async def commit_transaction(self):
+        self.in_transaction = False
+
+    async def abort_transaction(self):
+        self.in_transaction = False
+
+    async def end_session(self):
+        self.in_transaction = False
+
+
+class MockClient:
+    async def start_session(self):
+        return MockSession()
+
+
 class MockCollection:
     def __init__(self):
         self._docs = []
@@ -84,24 +113,24 @@ class MockCollection:
                     return False
         return True
 
-    async def insert_one(self, doc):
+    async def insert_one(self, doc, *args, **kwargs):
         doc_copy = copy.deepcopy(doc)
         if "_id" not in doc_copy:
             doc_copy["_id"] = ObjectId()
         self._docs.append(doc_copy)
         return MockInsertResult(doc_copy["_id"])
 
-    async def find_one(self, query):
+    async def find_one(self, query, *args, **kwargs):
         for d in self._docs:
             if self._matches(d, query):
                 return copy.deepcopy(d)
         return None
 
-    def find(self, query):
+    def find(self, query, *args, **kwargs):
         matching = [d for d in self._docs if self._matches(d, query)]
         return MockCursor(matching)
 
-    async def update_one(self, query, update, upsert=False):
+    async def update_one(self, query, update, upsert=False, *args, **kwargs):
         for i, d in enumerate(self._docs):
             if self._matches(d, query):
                 if "$set" in update:
@@ -121,7 +150,7 @@ class MockCollection:
             return {"upserted_id": new_doc["_id"]}
         return {"modified_count": 0}
 
-    async def update_many(self, query, update):
+    async def update_many(self, query, update, *args, **kwargs):
         count = 0
         for d in self._docs:
             if self._matches(d, query):
@@ -136,7 +165,7 @@ class MockCollection:
                 self.modified_count = c
         return MockUpdateResult(count)
 
-    async def find_one_and_update(self, query, update, return_document=True):
+    async def find_one_and_update(self, query, update, return_document=True, *args, **kwargs):
         for d in self._docs:
             if self._matches(d, query):
                 if "$set" in update:
@@ -147,24 +176,25 @@ class MockCollection:
                 return copy.deepcopy(d)
         return None
 
-    async def delete_one(self, query):
+    async def delete_one(self, query, *args, **kwargs):
         for i, d in enumerate(self._docs):
             if self._matches(d, query):
                 self._docs.pop(i)
                 return MockDeleteResult(1)
         return MockDeleteResult(0)
 
-    async def delete_many(self, query):
+    async def delete_many(self, query, *args, **kwargs):
         initial = len(self._docs)
         self._docs = [d for d in self._docs if not self._matches(d, query)]
         return MockDeleteResult(initial - len(self._docs))
 
-    async def create_index(self, keys, **kwargs):
+    async def create_index(self, keys, *args, **kwargs):
         return "index_created"
 
 
 class MockDatabase:
     def __init__(self):
+        self.client = MockClient()
         self.users = MockCollection()
         self.portfolios = MockCollection()
         self.holdings = MockCollection()
