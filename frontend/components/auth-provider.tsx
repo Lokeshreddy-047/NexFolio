@@ -31,8 +31,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        try {
+          const token = await currentUser.getIdToken();
+          document.cookie = `firebase_token=${token}; path=/; max-age=3600; SameSite=Lax`;
+        } catch {
+          // ignore token fetch error in development/offline
+        }
+      } else {
+        document.cookie = `firebase_token=; path=/; max-age=0; SameSite=Lax`;
+      }
       setLoading(false);
     });
 
@@ -41,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleSignOut = async () => {
     try {
+      document.cookie = `firebase_token=; path=/; max-age=0; SameSite=Lax`;
       await firebaseSignOut(auth);
     } catch (error) {
       console.error("Sign out error:", error);

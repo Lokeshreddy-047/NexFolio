@@ -94,6 +94,12 @@ export default function LoginPage() {
         return "Please enter a valid email address.";
       case "auth/popup-closed-by-user":
         return "Google sign-in popup was closed before completing.";
+      case "auth/popup-blocked":
+        return "The sign-in popup was blocked by your browser. Please allow popups for this site.";
+      case "auth/unauthorized-domain":
+        return "This domain (or localhost) is not authorized in your Firebase Console. Add it in Firebase Console > Authentication > Settings > Authorized domains.";
+      case "auth/operation-not-allowed":
+        return "Google sign-in is not enabled in Firebase Console. Enable it under Authentication > Sign-in method.";
       case "auth/too-many-requests":
         return "Too many failed attempts. Please wait a few minutes before trying again.";
       case "auth/network-request-failed":
@@ -121,6 +127,7 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, email.trim(), password);
       router.push("/dashboard");
     } catch (err: unknown) {
+      console.error("Email Sign-In error:", err);
       const firebaseError = err as { code?: string };
       setErrorMessage(mapFirebaseError(firebaseError.code || ""));
     } finally {
@@ -175,6 +182,7 @@ export default function LoginPage() {
       await signInWithPopup(auth, provider);
       router.push("/dashboard");
     } catch (err: unknown) {
+      console.error("Google Sign-In error:", err);
       const firebaseError = err as { code?: string };
       if (firebaseError.code !== "auth/popup-closed-by-user") {
         setErrorMessage(mapFirebaseError(firebaseError.code || ""));
